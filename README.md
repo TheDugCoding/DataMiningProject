@@ -1,0 +1,1 @@
+This repository contains our code for the assignments for the course INFOMDM Data Mining.
