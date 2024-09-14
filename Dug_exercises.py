@@ -9,6 +9,7 @@ credit_data = np.genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
 
 i(t) = p(0|t) * p(1|t) = p(0|t) * 1 - p(0|t)
 
+impurity reduction = ∆i(s,t) = i(t) − {π(l)i(l) + π(r)i(r)}
 """
 
 #this should work even with multiple classes (not true the formula for the multiclass Gini Index is deifferent)
