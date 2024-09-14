@@ -27,7 +27,7 @@ def best_split(x,y):
         sorted_values = np.sort(np.unique(credit_data[:, 3]))
         print(sorted_values)
         for value_index in range(len(sorted_values-1)):
-            #follows the x < c instructions avg, is the average of two consecutive numbers
+            #follows the x < c instructions, the variable avg is the average of two consecutive numbers
             avg = sum(sorted_values[value_index:value_index+2])/len(sorted_values[value_index:value_index+2])
             #select all the indexes where x < c (left child), then select indexes for the right child
             indexes_left_child = [i for i, value in enumerate(x) if value <= avg]
