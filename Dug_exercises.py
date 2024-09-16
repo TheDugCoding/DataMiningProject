@@ -55,3 +55,7 @@ labels = [1,0,1,1,1,0,0,1,1,0,1]
 #test Gini index
 gini_index_calc(labels)
 print(best_split(credit_data[:,3],credit_data[:,5]))
+
+#homework part 1
+x = [2,2,3,4,4,5,6,7,8,9]
+y = [0,0,0,1,1,1,0,2,2,2]
