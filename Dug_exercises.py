@@ -1,5 +1,6 @@
 from collections import Counter
 import numpy as np
+from itertools import combinations
 
 credit_data = np.genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
 
@@ -17,7 +18,7 @@ def gini_index_calc(x):
     gini_index = 1
     for class_name, value in Counter(x).items():
         gini_index *= (value/len(x))
-    print(gini_index)
+    #print(gini_index)
     return gini_index
 
 def best_split(x,y):
@@ -46,7 +47,12 @@ def best_split(x,y):
     else:
         raise ValueError("Arrays must have the same size")
 
+def rSubset(arr, r):
 
+    # return list of all subsets of length r
+    # to deal with duplicate subsets use
+    # set(list(combinations(arr, r)))
+    return list(combinations(arr, r))
 
 
 labels = [1,0,1,1,1,0,0,1,1,0,1]
@@ -59,3 +65,40 @@ print(best_split(credit_data[:,3],credit_data[:,5]))
 #homework part 1
 x = [2,2,3,4,4,5,6,7,8,9]
 y = [0,0,0,1,1,1,0,2,2,2]
+
+#test for the subset, remember to remove the duplicate from the feature list and select only the unique values
+arr = [1, 2, 3, 4]
+r = 2
+for index in range(1, len(arr)+1):
+    print (rSubset(arr, index))
+
+def best_split_v2(x,y):
+    best_impurity_reduction = 1.1
+    best_value = 0
+    combinations_of_features = []
+    if len(x) == len(y):
+        #print(x, y)
+        sorted_values = np.sort(np.unique(credit_data[:, 3]))
+        #print(sorted_values)
+        #calculating all the possible feature combinations fron nfeats
+        for index in range(1, len(sorted_values) + 1):
+            combinations_of_features.append(rSubset(sorted_values, index))
+        for combination in combinations_of_features:
+            for tuple in combination:
+                #select all the indexes where x < c (left child), then select indexes for the right child
+                indexes_left_child = [i for i, value in enumerate(x) if value in tuple]
+                indexes_right_child = list(set(range(len(x))) - set(indexes_left_child))
+                #calculate gini index for the current split, for both children
+                gini_index_left_child = gini_index_calc(y[indexes_left_child])
+                gini_index_right_child = gini_index_calc(y[indexes_right_child])
+                #calculate impurity reduction, lecture 2 slide 12
+                impurity_reduction = gini_index_calc(y) - (len(y[indexes_left_child])/len(y) * gini_index_left_child + len(y[indexes_right_child])/len(y) * gini_index_right_child)
+                if impurity_reduction < best_impurity_reduction:
+                    best_impurity_reduction = impurity_reduction
+                    best_value = tuple
+        return best_value
+
+    else:
+        raise ValueError("Arrays must have the same size")
+
+best_split_v2(credit_data[:,3],credit_data[:,5])
