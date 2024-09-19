@@ -44,13 +44,10 @@ def impurity(x):
 def tree_grow(x, y, nmin, minleaf, nfeat):
     nodelist = x
     tree = {}
-
+    level = 0
     # possible nodes to check must exist
     while len(nodelist) > 0:
-        count = 0
         for i in nodelist:
-            # used for index of tree dict (WIP)
-            count += 1
             # remove current node from nodes to check
             nodelist = nodelist.remove(i)
             # check if impurity of current node is not 0, else it cannot be split and is leaf node
@@ -59,11 +56,13 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                     # randomly select n number of candidate splits
                     candidate_splits = random.sample(i, nfeat)
                     # calculate best split and impurity reduction
-                    reduction = best_split(candidate_splits, y)
-                    # check child nodes in nodelist
-                    nodelist = nodelist + reduction
-            # return rules
-            tree[count] = i
+                    child_node_left, child_node_right, reduction = best_split(candidate_splits, y)
+                    # add child nodes to be checked to nodelist
+                    nodelist = nodelist.append(child_node_left, child_node_right)
+                # return nodes in tree (WIP)
+                tree[level] = child_node_left, child_node_right
+            else:
+                tree[level] = i
     return tree
 
 def tree_pred():
