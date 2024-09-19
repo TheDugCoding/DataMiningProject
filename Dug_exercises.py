@@ -85,6 +85,7 @@ def best_split_v2(x,y):
             combinations_of_features.append(rSubset(sorted_values, index))
         for combination in combinations_of_features:
             for tuple in combination:
+                print(tuple)
                 #select all the indexes that belogs to one of the features belonging to one of the two nodes
                 indexes_left_child = [i for i, value in enumerate(x) if value in tuple]
                 indexes_right_child = list(set(range(len(x))) - set(indexes_left_child))
