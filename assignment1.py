@@ -1,8 +1,37 @@
 import numpy as np
+import random
+from collections import Counter
 
 def best_split(x, y):
-    sorted = np.sort(np.unique(x[:3]))
-    print((sorted[0:7]+sorted[1:8])/2)
+    best_impurity_reduction = 1.1
+    best_value = 0
+    if len(x) == len(y):
+        sorted_values = np.sort(np.unique(x[:, 3]))
+        print(sorted_values)
+        for value_index in range(len(sorted_values-1)):
+            #follows the x < c instructions, the variable avg is the average of two consecutive numbers
+            avg = sum(sorted_values[value_index:value_index+2])/len(sorted_values[value_index:value_index+2])
+            #select all the indexes where x < c (left child), then select indexes for the right child
+            indexes_left_child = [i for i, value in enumerate(x) if value <= avg]
+            indexes_right_child = list(set(range(len(x))) - set(indexes_left_child))
+            #calculate gini index for the current split, for both children
+            gini_index_left_child = gini_index_calc(y[indexes_left_child])
+            gini_index_right_child = gini_index_calc(y[indexes_right_child])
+            #calculate impurity reduction, lecture 2 slide 12
+            impurity_reduction = gini_index_calc(y) - (len(y[indexes_left_child])/len(y) * gini_index_left_child + len(y[indexes_right_child])/len(y) * gini_index_right_child)
+            if impurity_reduction < best_impurity_reduction:
+                best_impurity_reduction = impurity_reduction
+                best_value = avg
+        return best_value, best_impurity_reduction
+    else:
+        raise ValueError("Arrays must have the same size")
+    
+def gini_index_calc(x):
+    gini_index = 1
+    for class_name, value in Counter(x).items():
+        gini_index *= (value/len(x))
+    print(gini_index)
+    return gini_index
 
 def impurity(x):
     sum = 0
@@ -13,21 +42,33 @@ def impurity(x):
     return prob_0 * prob_1
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
-    tree = 1
     nodelist = x
-    # nfeat: number of columns considered per split
+    tree = {}
 
-    split = best_split(x, y)
-
-    for i in nodelist:
-        len(nfeat) - 1 
-        node = i
+    # possible nodes to check must exist
+    while len(nodelist) > 0:
+        count = 0
+        for i in nodelist:
+            # used for index of tree dict (WIP)
+            count += 1
+            # remove current node from nodes to check
+            nodelist = nodelist.remove(i)
+            # check if impurity of current node is not 0, else it cannot be split and is leaf node
+            if impurity(i) > 0:
+                if len(i) >= nmin:
+                    # randomly select n number of candidate splits
+                    candidate_splits = random.sample(i, nfeat)
+                    # calculate best split and impurity reduction
+                    reduction = best_split(candidate_splits, y)
+                    # check child nodes in nodelist
+                    nodelist = nodelist + reduction
+            # return rules
+            tree[count] = i
     return tree
 
 def tree_pred():
     print('tree')
 
-data_matrix = [1,0,1,1,1,0,0,1,1,0,1]
-labels = [0]
-# tree_grow(data_matrix, labels, 2, 2, 2)
-best_split(data_matrix, labels)
+data_matrix = [[1,0,1,1],[1,0,0,1],[0,1,0,1]]
+labels = [[0,1],[1,1]]
+tree_grow(data_matrix, labels, 2, 2, 2)
