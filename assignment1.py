@@ -1,6 +1,9 @@
 import numpy as np
 import random
 from collections import Counter
+import pandas as pd
+
+credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 
 def best_split(x,y):
     best_impurity_reduction_overall = float('inf')
@@ -89,4 +92,5 @@ def tree_pred():
 
 data_matrix = [[1,0,1,1],[1,0,0,1],[0,1,0,1]]
 labels = [[0,1],[1,1]]
-tree_grow(data_matrix, labels, 2, 2, 2)
+tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers[:,5], 2, 2, 2)
+#tree_grow(data_matrix, labels, 2, 2, 2)
