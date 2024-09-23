@@ -113,15 +113,15 @@ def best_split_v3(x,y):
     best_impurity_reduction_overall = float('inf')
     best_value_overall = 0
     best_split_overall = ''
-    best_left_child_indexes = []
-    best_right_child_indexes = []
+    best_left_child_indexes_overall = []
+    best_right_child_indexes_overall = []
 
     if len(x) == len(y):
         for split in x.columns:
             best_impurity_reduction = float('inf')
             best_value = 0
-            indexes_left_child =[]
-            indexes_right_child = []
+            best_left_child_indexes = []
+            best_right_child_indexes = []
             sorted_values = np.sort(np.unique(x[split]))
             print(sorted_values)
             for value_index in range(len(sorted_values - 1)):
@@ -140,13 +140,15 @@ def best_split_v3(x,y):
                 if impurity_reduction < best_impurity_reduction:
                     best_impurity_reduction = impurity_reduction
                     best_value = avg
+                    best_left_child_indexes = indexes_left_child
+                    best_right_child_indexes = indexes_right_child
             if best_impurity_reduction < best_impurity_reduction_overall:
                 best_impurity_reduction_overall = best_impurity_reduction
                 best_value_overall = best_value
                 best_split_overall = split
-                best_left_child_indexes = indexes_left_child
-                best_right_child_indexes = indexes_right_child
-        return best_value_overall, best_split_overall, best_left_child_indexes, best_right_child_indexes
+                best_left_child_indexes_overall = best_left_child_indexes
+                best_right_child_indexes_overall = best_right_child_indexes
+        return best_value_overall, best_split_overall, best_left_child_indexes_overall, best_right_child_indexes_overall
     else:
         raise ValueError("Arrays must have the same size")
 
