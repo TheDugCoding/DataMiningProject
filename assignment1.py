@@ -2,27 +2,46 @@ import numpy as np
 import random
 from collections import Counter
 
-def best_split(x, y):
-    best_impurity_reduction = 1.1
-    best_value = 0
+def best_split(x,y):
+    best_impurity_reduction_overall = float('inf')
+    best_value_overall = 0
+    best_split_overall = ''
+    best_left_child_indexes_overall = []
+    best_right_child_indexes_overall = []
+
     if len(x) == len(y):
-        sorted_values = np.sort(np.unique(x[:, 3]))
-        print(sorted_values)
-        for value_index in range(len(sorted_values-1)):
-            #follows the x < c instructions, the variable avg is the average of two consecutive numbers
-            avg = sum(sorted_values[value_index:value_index+2])/len(sorted_values[value_index:value_index+2])
-            #select all the indexes where x < c (left child), then select indexes for the right child
-            indexes_left_child = [i for i, value in enumerate(x) if value <= avg]
-            indexes_right_child = list(set(range(len(x))) - set(indexes_left_child))
-            #calculate gini index for the current split, for both children
-            gini_index_left_child = gini_index_calc(y[indexes_left_child])
-            gini_index_right_child = gini_index_calc(y[indexes_right_child])
-            #calculate impurity reduction, lecture 2 slide 12
-            impurity_reduction = gini_index_calc(y) - (len(y[indexes_left_child])/len(y) * gini_index_left_child + len(y[indexes_right_child])/len(y) * gini_index_right_child)
-            if impurity_reduction < best_impurity_reduction:
-                best_impurity_reduction = impurity_reduction
-                best_value = avg
-        return best_value, best_impurity_reduction
+        for split in x.columns:
+            best_impurity_reduction = float('inf')
+            best_value = 0
+            best_left_child_indexes = []
+            best_right_child_indexes = []
+            sorted_values = np.sort(np.unique(x[split]))
+            print(sorted_values)
+            for value_index in range(len(sorted_values - 1)):
+                # follows the x < c instructions, the variable avg is the average of two consecutive numbers
+                avg = sum(sorted_values[value_index:value_index + 2]) / len(sorted_values[value_index:value_index + 2])
+                # select all the indexes where x < c (left child), then select indexes for the right child
+                indexes_left_child = [i for i, value in enumerate(x[split]) if value <= avg]
+                indexes_right_child = list(set(range(len(x[split]))) - set(indexes_left_child))
+                # calculate gini index for the current split, for both children
+                gini_index_left_child = gini_index_calc(y[indexes_left_child])
+                gini_index_right_child = gini_index_calc(y[indexes_right_child])
+                # calculate impurity reduction, lecture 2 slide 12
+                impurity_reduction = gini_index_calc(y) - (
+                            len(y[indexes_left_child]) / len(y) * gini_index_left_child + len(
+                        y[indexes_right_child]) / len(y) * gini_index_right_child)
+                if impurity_reduction < best_impurity_reduction:
+                    best_impurity_reduction = impurity_reduction
+                    best_value = avg
+                    best_left_child_indexes = indexes_left_child
+                    best_right_child_indexes = indexes_right_child
+            if best_impurity_reduction < best_impurity_reduction_overall:
+                best_impurity_reduction_overall = best_impurity_reduction
+                best_value_overall = best_value
+                best_split_overall = split
+                best_left_child_indexes_overall = best_left_child_indexes
+                best_right_child_indexes_overall = best_right_child_indexes
+        return best_value_overall, best_split_overall, best_left_child_indexes_overall, best_right_child_indexes_overall
     else:
         raise ValueError("Arrays must have the same size")
     
@@ -56,7 +75,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                     # randomly select n number of candidate splits
                     candidate_splits = random.sample(i, nfeat)
                     # calculate best split and impurity reduction
-                    child_node_left, child_node_right, reduction = best_split(candidate_splits, y)
+                    value, split, child_node_left, child_node_right = best_split(candidate_splits, y)
                     # add child nodes to be checked to nodelist
                     nodelist = nodelist.append(child_node_left, child_node_right)
                 # return nodes in tree (WIP)
