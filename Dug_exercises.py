@@ -1,9 +1,10 @@
 from collections import Counter
 import numpy as np
 from itertools import combinations
+import pandas as pd
 
 credit_data = np.genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
-
+credit_data_with_headers = pd.read_csv('data/credit.txt', delim_whitespace=True)
 #assignment 1
 
 """gini index for two class
@@ -76,13 +77,19 @@ def best_split_v2(x,y):
     best_impurity_reduction = 1.1
     best_value = 0
     combinations_of_features = []
+    # Initialize an empty list to store the separated column names
+    split_columns = []
+    # Loop through each element in the Index and split by commas
+    for col in x.columns:
+        split_columns.extend(col.split(','))
     if len(x) == len(y):
         #print(x, y)
-        sorted_values = np.sort(np.unique(credit_data[:, 3]))
+        #sorted_values = np.sort(np.unique(list(x.columns.split(','))))
+
         #print(sorted_values)
         #calculating all the possible feature combinations fron nfeats
-        for index in range(1, len(sorted_values) + 1):
-            combinations_of_features.append(rSubset(sorted_values, index))
+        for index in range(1, len(split_columns) + 1):
+            combinations_of_features.append(rSubset(split_columns, index))
         for combination in combinations_of_features:
             for tuple in combination:
                 print(tuple)
@@ -102,4 +109,5 @@ def best_split_v2(x,y):
     else:
         raise ValueError("Arrays must have the same size")
 
-best_split_v2(credit_data[:,3],credit_data[:,5])
+#best_split_v2(credit_data[:,3],credit_data[:,5])
+best_split_v2(credit_data_with_headers, credit_data[:,5])
