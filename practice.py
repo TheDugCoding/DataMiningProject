@@ -1,4 +1,5 @@
 import numpy  as np
+from collections import Counter
 
 def impurity(x):
     """
@@ -12,6 +13,7 @@ def impurity(x):
         count_y = array_len - count_x
         gini_index = (count_x / array_len) * (count_y / array_len) 
         return gini_index
+
 
 def bestsplit(x, y):
     """
@@ -27,8 +29,10 @@ def bestsplit(x, y):
         c = int(np.mean(sorted_x[i:i+2]))
 
         # split instances
-        pred_left = y[x <= c]
-        pred_right = y[x > c]       
+        instances_left = x <= c
+        instances_right = x > c
+        pred_left = y[instances_left]
+        pred_right = y[instances_right]       
 
         # compute impurity after the split
         impurity_left = impurity(pred_left)
@@ -42,49 +46,90 @@ def bestsplit(x, y):
             best_split = c
             best_reduction = impurity_reduction
     
-    return best_split 
-
-class Node:
-    def __init__(self, feature, c, prediction, left, right):
-        self.feature = feature
-        self.c = c
-        self.prediction = prediction
-        self.left = left
-        self.right = right 
+    return best_split, best_reduction, x[instances_left], x[instances_right]
 
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
-    nodelist = x
+    """
+    Grows a Classification Tree
+    """
+    # root node contains all instances
+    Tree = []
+    nodelist = [{'root':x}]
+
     while len(nodelist) > 0:
-        # early stopping
-        if x < nmin:
-            pass
-        for feature in x:
-            # looking for the best value to split a given attribute
-            c = best_split(x[feature], y)
+        S = set()
+        current_node = nodelist[0]
+        skip = False
 
-            # split instances
-            pred_left = y[x <= c]
-            pred_right = y[x > c]   
+        # retrieve node type and label count
+        node_label = list(nodelist[0].keys())[0]
+        label_count = Counter(y)
+        X = nodelist[0][node_label]
 
-            #if impurity(i) > 0:
+        # compute the best split for each feature
+        for feature in range(nfeat):
+            if not nodelist:
+                break
             
+            # early stopping: pure node
+            if label_count[0] < nmin or label_count[1] < nmin:
+                print('nmin')
+                break
+
+            # determine the threshold
+            c, reduction, instances_left, instances_right = bestsplit(X[:, feature], y)
+               
+            # store split info
+            S.add((c, reduction, feature))
+
+            # remove node from the list
+            current_node = nodelist.pop(0)
+
+            # early stopping: min num of instances per leaf 
+            if len(instances_left) < minleaf or len(instances_right) < minleaf:
+                print('minleaf')
+                skip = True
+                break
+        
+        if impurity(current_node) > 0 and not skip:
+            # compute best split over all other best splits
+            s = max(S, key=lambda x: x[2])
+            print(s)
+            Tree.append(s)
+
+            # store nodes
+            nodelist.append({'left': s[3]})
+            nodelist.append({'right': s[4]})
+
+        #elif nodelist and not skip:
+            #nodelist.pop(0)
+
+    return Tree
+
 
 
 if __name__ == "__main__":
     # Read the dataset in the txt file into a 2d-matrix 
     credit_data = np.genfromtxt('dm/credit.txt', delimiter=',', skip_header=True)
-
+    
     # Compute the gini index 
     array = np.array([1,0,1,1,1,0,0,1,1,0,1])
     gini_index = impurity(array)
 
     # Compute the best split 
-    best_split = bestsplit(credit_data[:,3], credit_data[:,5])
+    X = credit_data[:,3]
+    y = credit_data[:,5]
+    best_split, _, _, _ = bestsplit(X, y)
 
-    #print(credit_data)
+    print(credit_data)
     print(gini_index)
     print(best_split)
+    
+    # build classification tree
+    X = credit_data.astype(int)
+    tree = tree_grow(X, y, 1, 1, len(X[0]))
+    print(tree)
 
 
 
