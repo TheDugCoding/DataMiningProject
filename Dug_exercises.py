@@ -109,7 +109,7 @@ def best_split_v2(x,y):
     else:
         raise ValueError("Arrays must have the same size")
 
-def best_split_v3(x,y):
+def best_split_v3(x,y, minleaf):
     best_impurity_reduction_overall = float('inf')
     best_value_overall = 0
     best_split_overall = ''
@@ -137,7 +137,7 @@ def best_split_v3(x,y):
                 impurity_reduction = gini_index_calc(y) - (
                             len(y[indexes_left_child]) / len(y) * gini_index_left_child + len(
                         y[indexes_right_child]) / len(y) * gini_index_right_child)
-                if impurity_reduction < best_impurity_reduction:
+                if impurity_reduction < best_impurity_reduction and len(indexes_left_child)>minleaf and len(indexes_left_child)<minleaf:
                     best_impurity_reduction = impurity_reduction
                     best_value = avg
                     best_left_child_indexes = indexes_left_child
@@ -154,7 +154,7 @@ def best_split_v3(x,y):
 
 #best_split_v2(credit_data[:,3],credit_data[:,5])
 #best_split_v2(credit_data_with_headers, credit_data[:,5])
-print(best_split_v3(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data[:,5]))
+print(best_split_v3(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data[:,5], 2))
 
 data_matrix = [[1,0,1,1],[1,0,0,1],[0,1,0,1]]
 labels = [[0,1],[1,1]]
