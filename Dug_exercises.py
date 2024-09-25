@@ -124,24 +124,35 @@ def best_split_v3(x,y, minleaf):
             best_right_child_indexes = []
             sorted_values = np.sort(np.unique(x[split]))
             print(sorted_values)
-            for value_index in range(len(sorted_values - 1)):
-                # follows the x < c instructions, the variable avg is the average of two consecutive numbers
-                avg = sum(sorted_values[value_index:value_index + 2]) / len(sorted_values[value_index:value_index + 2])
-                # select all the indexes where x < c (left child), then select indexes for the right child
-                indexes_left_child = [i for i, value in enumerate(x[split]) if value <= avg]
-                indexes_right_child = list(set(range(len(x[split]))) - set(indexes_left_child))
-                # calculate gini index for the current split, for both children
-                gini_index_left_child = gini_index_calc(y[indexes_left_child])
-                gini_index_right_child = gini_index_calc(y[indexes_right_child])
-                # calculate impurity reduction, lecture 2 slide 12
-                impurity_reduction = gini_index_calc(y) - (
-                            len(y[indexes_left_child]) / len(y) * gini_index_left_child + len(
-                        y[indexes_right_child]) / len(y) * gini_index_right_child)
-                if impurity_reduction < best_impurity_reduction and len(indexes_left_child)>minleaf and len(indexes_left_child)<minleaf:
-                    best_impurity_reduction = impurity_reduction
-                    best_value = avg
-                    best_left_child_indexes = indexes_left_child
-                    best_right_child_indexes = indexes_right_child
+            #check if there are only 2 values, then we don't need to calculate the average
+            if len(sorted_values) == 2:
+                best_left_child_indexes = [i for i, value in enumerate(x[split]) if value == sorted_values[0]]
+                best_right_child_indexes = list(set(range(len(x[split]))) - set(best_left_child_indexes))
+                best_value = sorted_values[0]
+                gini_index_left_child = gini_index_calc(y[best_left_child_indexes])
+                gini_index_right_child = gini_index_calc(y[best_right_child_indexes])
+                best_impurity_reduction = gini_index_calc(y) - (
+                        len(y[best_left_child_indexes]) / len(y) * gini_index_left_child + len(
+                    y[best_right_child_indexes]) / len(y) * gini_index_right_child)
+            else:
+                for value_index in range(len(sorted_values - 1)):
+                    # follows the x < c instructions, the variable avg is the average of two consecutive numbers
+                    avg = sum(sorted_values[value_index:value_index + 2]) / len(sorted_values[value_index:value_index + 2])
+                    # select all the indexes where x < c (left child), then select indexes for the right child
+                    indexes_left_child = [i for i, value in enumerate(x[split]) if value <= avg]
+                    indexes_right_child = list(set(range(len(x[split]))) - set(indexes_left_child))
+                    # calculate gini index for the current split, for both children
+                    gini_index_left_child = gini_index_calc(y[indexes_left_child])
+                    gini_index_right_child = gini_index_calc(y[indexes_right_child])
+                    # calculate impurity reduction, lecture 2 slide 12
+                    impurity_reduction = gini_index_calc(y) - (
+                                len(y[indexes_left_child]) / len(y) * gini_index_left_child + len(
+                            y[indexes_right_child]) / len(y) * gini_index_right_child)
+                    if impurity_reduction < best_impurity_reduction and len(indexes_left_child)>minleaf and len(indexes_right_child)>minleaf:
+                        best_impurity_reduction = impurity_reduction
+                        best_value = avg
+                        best_left_child_indexes = indexes_left_child
+                        best_right_child_indexes = indexes_right_child
             if best_impurity_reduction < best_impurity_reduction_overall:
                 best_impurity_reduction_overall = best_impurity_reduction
                 best_value_overall = best_value
