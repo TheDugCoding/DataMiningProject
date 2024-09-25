@@ -20,7 +20,7 @@ def best_split(x, y, minleaf):
             best_right_child_indexes = []
             sorted_values = np.sort(np.unique(x[split]))
             print(sorted_values)
-            #check that we have enough different values
+            #check that we have enough different values for a split
             if len(sorted_values) > 1:
                 # check if there are only 2 values, then we don't need to calculate the average
                 if len(sorted_values) == 2:
