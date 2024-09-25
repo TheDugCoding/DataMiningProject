@@ -5,7 +5,7 @@ import pandas as pd
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 
-def best_split(x,y):
+def best_split(x,y, minleaf):
     best_impurity_reduction_overall = float('inf')
     best_value_overall = 0
     best_split_overall = ''
@@ -33,7 +33,7 @@ def best_split(x,y):
                 impurity_reduction = gini_index_calc(y) - (
                             len(y[indexes_left_child]) / len(y) * gini_index_left_child + len(
                         y[indexes_right_child]) / len(y) * gini_index_right_child)
-                if impurity_reduction < best_impurity_reduction:
+                if impurity_reduction < best_impurity_reduction and len(indexes_left_child)>minleaf and len(indexes_left_child)<minleaf:
                     best_impurity_reduction = impurity_reduction
                     best_value = avg
                     best_left_child_indexes = indexes_left_child
@@ -78,7 +78,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                     # randomly select n number of candidate splits
                     candidate_splits = random.sample(i, nfeat)
                     # calculate best split and impurity reduction
-                    value, split, child_node_left, child_node_right = best_split(candidate_splits, y)
+                    value, split, child_node_left, child_node_right = best_split(candidate_splits, y, minleaf)
                     # add child nodes to be checked to nodelist
                     nodelist = nodelist.append(child_node_left, child_node_right)
                 # return nodes in tree (WIP)
