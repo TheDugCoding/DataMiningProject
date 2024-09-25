@@ -19,7 +19,6 @@ def best_split(x,y, minleaf):
             best_left_child_indexes = []
             best_right_child_indexes = []
             sorted_values = np.sort(np.unique(x[split]))
-            print(sorted_values)
             for value_index in range(len(sorted_values - 1)):
                 # follows the x < c instructions, the variable avg is the average of two consecutive numbers
                 avg = sum(sorted_values[value_index:value_index + 2]) / len(sorted_values[value_index:value_index + 2])
@@ -52,7 +51,6 @@ def gini_index_calc(x):
     gini_index = 1
     for class_name, value in Counter(x).items():
         gini_index *= (value/len(x))
-    print(gini_index)
     return gini_index
 
 def impurity(x):
@@ -64,34 +62,30 @@ def impurity(x):
     return prob_0 * prob_1
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
-    nodelist = x
-    tree = {}
-    level = 0
+    nodelist = [x]
+    Tree = []
     # possible nodes to check must exist
     while len(nodelist) > 0:
-        for i in nodelist:
-            # remove current node from nodes to check
-            nodelist = nodelist.remove(i)
-            # check if impurity of current node is not 0, else it cannot be split and is leaf node
-            if impurity(i) > 0:
-                if len(i) >= nmin:
-                    # randomly select n number of candidate splits
-                    candidate_splits = random.sample(i, nfeat)
-                    # calculate best split and impurity reduction
-                    value, split, child_node_left, child_node_right = best_split(candidate_splits, y, minleaf)
-                    # add child nodes to be checked to nodelist
-                    nodelist = nodelist.append(child_node_left, child_node_right)
-                # return nodes in tree (WIP)
-                tree[level] = child_node_left, child_node_right
-            else:
-                tree[level] = i
-    return tree
+        current_node = nodelist[0]
+        nodelist = nodelist.remove(current_node)
+        print(nodelist)
+        # check if impurity of class labels is not 0, else it cannot be split and is leaf node
+        if impurity(y) > 0:
+            if current_node.index.size >= nmin:
+                # randomly select nfeat number of columns
+                candidate_splits = current_node.sample(n=nfeat, axis='columns')
+                # calculate best split and impurity reduction
+                value, split, child_node_left, child_node_right = best_split(candidate_splits, y, minleaf)
+                # add child nodes to be checked to nodelist
+                nodelist = nodelist.append(child_node_left, ignore_index=True)
+                nodelist = nodelist.append(child_node_right, ignore_index=True)
+        else:
+            Tree.append(current_node)
+    return Tree
 
 def tree_pred():
     print('tree')
 
-data_matrix = [[1,0,1,1],[1,0,0,1],[0,1,0,1]]
-labels = [[0,1],[1,1]]
 print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class']))
 tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 2)
-#tree_grow(data_matrix, labels, 2, 2, 2)
+# tree_grow(data_matrix, labels, 2, 2, 2)
