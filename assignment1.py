@@ -19,7 +19,6 @@ def best_split(x, y, minleaf):
             best_left_child_indexes = []
             best_right_child_indexes = []
             sorted_values = np.sort(np.unique(x[split]))
-            print(sorted_values)
             #check that we have enough different values
             if len(sorted_values) > 1:
                 # check if there are only 2 values, then we don't need to calculate the average
@@ -59,7 +58,7 @@ def best_split(x, y, minleaf):
                     best_split_overall = split
                     best_left_child_indexes_overall = best_left_child_indexes
                     best_right_child_indexes_overall = best_right_child_indexes
-        return best_value_overall, best_split_overall, best_left_child_indexes_overall, best_right_child_indexes_overall
+        return best_left_child_indexes_overall, best_right_child_indexes_overall
     else:
         raise ValueError("Arrays must have the same size")
     
@@ -84,7 +83,6 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
     while len(nodelist) > 0:
         current_node = nodelist[0]
         classes = y.iloc[current_node.index]
-        # classes = classes.to_list()
         nodelist.pop(0)
         # check if impurity of class labels is not 0, else it cannot be split and is leaf node
         if impurity(classes) > 0:
@@ -103,5 +101,5 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 def tree_pred():
     print('tree')
 
-#print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
-tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 2)
+# print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
+tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
