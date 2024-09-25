@@ -5,7 +5,7 @@ import pandas as pd
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 
-def best_split(x,y, minleaf):
+def best_split(x, y, minleaf):
     best_impurity_reduction_overall = float('inf')
     best_value_overall = 0
     best_split_overall = ''
@@ -83,15 +83,16 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
     # possible nodes to check must exist
     while len(nodelist) > 0:
         current_node = nodelist[0]
-        y = y.iloc[current_node.index]
-        nodelist = [i for i in nodelist if current_node not in nodelist]
+        classes = y.iloc[current_node.index]
+        # classes = classes.to_list()
+        nodelist.pop(0)
         # check if impurity of class labels is not 0, else it cannot be split and is leaf node
-        if impurity(y) > 0:
+        if impurity(classes) > 0:
             if current_node.shape[0] >= nmin:
                 # randomly select nfeat number of columns
                 candidate_splits = current_node.sample(n=nfeat, axis='columns')
-                # calculate best split and impurity reduction
-                value, split, child_node_left, child_node_right = best_split(candidate_splits, y, minleaf)
+                # calculate best split and impurity reduction to get child nodes
+                child_node_left, child_node_right = best_split(candidate_splits, classes, minleaf)
                 # add rows of child nodes to be checked to nodelist
                 nodelist.append(x.iloc[child_node_left])
                 nodelist.append(x.iloc[child_node_right])
