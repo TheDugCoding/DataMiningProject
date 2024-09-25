@@ -79,9 +79,13 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
             # determine the threshold
             c, reduction, instances_left, instances_right = bestsplit(X[:, feature], y)
+            
+            # Convert instances_left and instances_right to tuples for set storage
+            instances_left_tuple = tuple(map(tuple, instances_left))
+            instances_right_tuple = tuple(map(tuple, instances_right))
                
             # store split info
-            S.add((c, reduction, feature))
+            S.add((c, reduction, feature, instances_left_tuple, instances_right_tuple))
 
             # remove node from the list
             current_node = nodelist.pop(0)
