@@ -69,12 +69,15 @@ def gini_index_calc(x):
     return gini_index
 
 def impurity(x):
-    sum = 0
-    for i in x:
-        sum += i
-    prob_0 = sum/len(x)
-    prob_1 = 1-prob_0
-    return prob_0 * prob_1
+    if len(x) > 0:
+        sum = 0
+        for i in x:
+            sum += i
+        prob_0 = sum/len(x)
+        prob_1 = 1-prob_0
+        return prob_0 * prob_1
+    else:
+        return 0
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
     node = 1
@@ -96,16 +99,26 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 # add rows of child nodes to be checked to nodelist
                 nodelist.append(x.iloc[child_node_left])
                 nodelist.append(x.iloc[child_node_right])
-                Tree[node] = current_node.index.to_list()
+                if (len(child_node_left) + len(child_node_right)) == 0:
+                    Tree[node, "leaf"] = current_node.index.to_list()
+                else:
+                    Tree[node] = current_node.index.to_list()
                 node += 1
         else:
-            Tree[node, "leaf"] = current_node.index.to_list()
-            node += 1
+            if len(current_node) > 0:
+                Tree[node, "leaf"] = current_node.index.to_list()
+                node += 1
     return Tree
+
+def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
+    trees = {}
+    for i in range(m):
+        trees[i] = tree_grow(x, y, nmin, minleaf, nfeat)
+    return trees
 
 def tree_pred():
     print('tree')
 
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
-Tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
+Tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 2, 6)
 print(Tree)
