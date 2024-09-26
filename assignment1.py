@@ -117,8 +117,9 @@ def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
         trees.append(tree_grow(x, y, nmin, minleaf, nfeat))
     return trees
 
-def tree_pred():
-    print('tree')
+def tree_pred(x, tr):
+    predicted_labels = ''
+    return predicted_labels
 
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
 Tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 2, 6)
