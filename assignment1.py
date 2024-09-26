@@ -19,7 +19,6 @@ def best_split(x, y, minleaf):
             best_left_child_indexes = []
             best_right_child_indexes = []
             sorted_values = np.sort(np.unique(x[split]))
-            print(sorted_values)
             #check that we have enough different values for a split
             if len(sorted_values) > 1:
                 # check if there are only 2 values, then we don't need to calculate the average
@@ -78,8 +77,9 @@ def impurity(x):
     return prob_0 * prob_1
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
+    node = 1
     nodelist = [x]
-    Tree = []
+    Tree = {}
     # possible nodes to check must exist
     while len(nodelist) > 0:
         current_node = nodelist[0]
@@ -96,12 +96,16 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 # add rows of child nodes to be checked to nodelist
                 nodelist.append(x.iloc[child_node_left])
                 nodelist.append(x.iloc[child_node_right])
+                Tree[node] = current_node.index.to_list()
+                node += 1
         else:
-            Tree.append(current_node)
+            Tree[node, "leaf"] = current_node.index.to_list()
+            node += 1
     return Tree
 
 def tree_pred():
     print('tree')
 
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
-tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
+Tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
+print(Tree)
