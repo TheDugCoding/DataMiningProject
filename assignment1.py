@@ -111,9 +111,10 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
     return Tree
 
 def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
-    trees = {}
+    # assignment states trees must be in list
+    trees = []
     for i in range(m):
-        trees[i] = tree_grow(x, y, nmin, minleaf, nfeat)
+        trees.append(tree_grow(x, y, nmin, minleaf, nfeat))
     return trees
 
 def tree_pred():
