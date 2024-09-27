@@ -121,7 +121,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
 if __name__ == "__main__":
     # Read the dataset in the txt file into a 2d-matrix 
-    credit_data = np.genfromtxt('dm/credit.txt', delimiter=',', skip_header=True)
+    credit_data = np.genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
     
     # Compute the gini index 
     array = np.array([1,0,1,1,1,0,0,1,1,0,1])

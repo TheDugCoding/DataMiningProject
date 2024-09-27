@@ -80,7 +80,7 @@ def impurity(x):
         return 0
 
 class Node:
-    def __init__(self, instances, feature=None, threshold=None, left=None, right=None, predicted_class=None):
+    def __init__(self, instances, feature=None, threshold=None, left=[], right=[], predicted_class=None):
         self.instances = instances
         self.feature = feature
         self.threshold = threshold
@@ -94,15 +94,15 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
     nodelist = [root]
 
     # tree grow stops when we split all the nodes, the nodes that cannot be split are removed from the list
-    while nodelist:
+    while len(nodelist) > 0:
         # visit the first node
-        current_node = nodelist[0]
-
-        # store node in the tree before splitting
-        labels = y.iloc[current_node_instances]
+        current_node = nodelist.pop()
 
         # store the node instances
         current_node_instances = current_node.instances
+
+        # store node in the tree before splitting
+        labels = y.iloc[current_node_instances]
 
         # avoid splitting leaf nodes with zero impurity
         if impurity(labels) > 0:
@@ -124,13 +124,13 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 # update list
                 nodelist.append(current_node.left)
                 nodelist.append(current_node.right)
-                nodelist.pop()
+                
 
         elif current_node_instances > minleaf: # early stopping: min num of instances per leaf
             # return the final prediction of the leaf node
             current_node.predicted_class = labels.mode()[0]
 
-    return Tree
+    return root
 
 def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
     # assignment states trees must be in list
