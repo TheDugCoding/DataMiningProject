@@ -46,7 +46,7 @@ def bestsplit(x, y):
             best_split = c
             best_reduction = impurity_reduction
     
-    return best_split, best_reduction, x[instances_left], x[instances_right]
+    return best_split, best_reduction, instances_left, instances_right 
 
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
@@ -56,19 +56,22 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
     # root node contains all instances
     Tree = []
     nodelist = [{'root':x}]
+    current_node = nodelist[0]
 
     while len(nodelist) > 0:
         S = set()
-        current_node = nodelist[0]
+        #current_node = nodelist[0]
         skip = False
 
-        # retrieve node type and label count
+        # retrieve node type and label count to get current node instances
         node_label = list(nodelist[0].keys())[0]
         label_count = Counter(y)
+        print("label_count", label_count)
         X = nodelist[0][node_label]
 
         # compute the best split for each feature
         for feature in range(nfeat):
+            # empty tree
             if not nodelist:
                 break
             
@@ -79,13 +82,15 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
             # determine the threshold
             c, reduction, instances_left, instances_right = bestsplit(X[:, feature], y)
+            print(np.where(instances_left == True))
             
-            # Convert instances_left and instances_right to tuples for set storage
-            instances_left_tuple = tuple(map(tuple, instances_left))
-            instances_right_tuple = tuple(map(tuple, instances_right))
-               
+            # pack the indexes into tuples
+            instances_left_tuple = tuple([tuple(i) for i in np.where(instances_left == True) ])
+            instances_right_tuple = tuple([tuple(i) for i in np.where(instances_right == True)])
+
             # store split info
             S.add((c, reduction, feature, instances_left_tuple, instances_right_tuple))
+            print(S)
 
             # remove node from the list
             current_node = nodelist.pop(0)
@@ -93,18 +98,19 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
             # early stopping: min num of instances per leaf 
             if len(instances_left) < minleaf or len(instances_right) < minleaf:
                 print('minleaf')
-                skip = True
+                #skip = True
                 break
+            print(current_node)
         
-        if impurity(current_node) > 0 and not skip:
+        if impurity(current_node) > 0: # and not skip:
             # compute best split over all other best splits
             s = max(S, key=lambda x: x[2])
             print(s)
             Tree.append(s)
 
             # store nodes
-            nodelist.append({'left': s[3]})
-            nodelist.append({'right': s[4]})
+            nodelist.append({'left': [t for t in s[3]]})
+            nodelist.append({'right': [t for t in s[4]]})
 
         #elif nodelist and not skip:
             #nodelist.pop(0)
@@ -126,7 +132,7 @@ if __name__ == "__main__":
     y = credit_data[:,5]
     best_split, _, _, _ = bestsplit(X, y)
 
-    print(credit_data)
+    #print(credit_data)
     print(gini_index)
     print(best_split)
     
