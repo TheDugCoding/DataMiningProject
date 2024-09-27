@@ -2,6 +2,7 @@ import numpy as np
 import random
 from collections import Counter
 import pandas as pd
+import statistics
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 
@@ -78,6 +79,35 @@ def impurity(x):
         return prob_0 * prob_1
     else:
         return 0
+    
+def print_tree(node, level=0, side="root"):
+    """ Recursively print the structure of the decision tree. """
+    if node is None:
+        print("The tree is empty.")
+        return
+
+    indent = "   " * level  # Indentation for visual representation
+
+    # Check if node is a leaf
+    if node != []:
+        if node.left is None and node.right is None:
+            # Leaf node: print predicted class and number of instances
+            print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}")
+        else:
+            # Internal node: print splitting feature and threshold
+            print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}")
+
+            # Recursively print the left and right subtrees
+            if node.left is not None:
+                print_tree(node.left, level + 1, "left")
+            else:
+                print(f"{indent}   - left [Empty]")  # Show if the left child is missing
+
+            if node.right is not None:
+                print_tree(node.right, level + 1, "right")
+            else:
+                print(f"{indent}   - right [Empty]")  # Show if the right child is missing
+
 
 class Node:
     def __init__(self, instances, feature=None, threshold=None, left=[], right=[], predicted_class=None):
@@ -90,45 +120,48 @@ class Node:
 
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
-    root = Node(x.index)
+    root = Node(x)
     nodelist = [root]
 
     # tree grow stops when we split all the nodes, the nodes that cannot be split are removed from the list
-    while len(nodelist) > 0:
+    while nodelist:
         # visit the first node
-        current_node = nodelist.pop()
+        current_node = nodelist[0]
 
         # store the node instances
         current_node_instances = current_node.instances
 
         # store node in the tree before splitting
-        labels = y.iloc[current_node_instances]
+        labels = y.iloc[current_node_instances.index]
+        
+        nodelist.pop(0)
 
         # avoid splitting leaf nodes with zero impurity
         if impurity(labels) > 0:
     
             # early stopping: pure node
-            if len(current_node.left) >= nmin or len(current_node.left) >= nmin:
+            if current_node.instances.shape[0] >= nmin:
+                print
                 # random sample nfeat number of columns
-                candidate_features = random.sample(current_node_instances, nfeat)
+                candidate_features = current_node.instances.sample(n=nfeat, axis='columns')#np.random.choice(x.columns, size=nfeat, replace=False) #x.columns[current_node.instances].sample(n=nfeat, axis='columns')
 
                 # calculate best split and impurity reduction to get child nodes
                 left, right, feature, threshold = best_split(candidate_features, labels, minleaf)
 
-                # store info in current node
-                current_node.left = Node(left, feature, threshold)
-                current_node.right = Node(right, feature, threshold)
+                # store current node info 
+                current_node.left = Node(x.iloc[left], feature, threshold)
+                current_node.right = Node(x.iloc[right], feature, threshold)
                 current_node.threshold = threshold
                 current_node.feature = feature
+                current_node.predicted_class = statistics.mode(labels)
                 
                 # update list
                 nodelist.append(current_node.left)
                 nodelist.append(current_node.right)
                 
-
-        elif current_node_instances > minleaf: # early stopping: min num of instances per leaf
+        elif len(current_node_instances) > 0: # early stopping: min num of instances per leaf
             # return the final prediction of the leaf node
-            current_node.predicted_class = labels.mode()[0]
+            current_node.predicted_class = statistics.mode(labels)
 
     return root
 
@@ -144,5 +177,6 @@ def tree_pred(x, tr):
     return predicted_labels
 
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
-Tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5, 6)
-print(Tree)
+#Tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5, 6)
+#rint(Tree)
+print_tree(tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5))
