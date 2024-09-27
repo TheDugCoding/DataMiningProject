@@ -143,7 +143,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
             if current_node.instances.shape[0] >= nmin:
                 print
                 # random sample nfeat number of columns
-                candidate_features = current_node.instances.sample(n=nfeat, axis='columns')#np.random.choice(x.columns, size=nfeat, replace=False) #x.columns[current_node.instances].sample(n=nfeat, axis='columns')
+                candidate_features = current_node.instances.sample(n=nfeat, axis='columns')
 
                 # calculate best split and impurity reduction to get child nodes
                 left, right, feature, threshold = best_split(candidate_features, labels, minleaf)
@@ -159,7 +159,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 nodelist.append(current_node.left)
                 nodelist.append(current_node.right)
                 
-        elif len(current_node_instances) > 0: # early stopping: min num of instances per leaf
+        elif len(current_node_instances) > 0: 
             # return the final prediction of the leaf node
             current_node.predicted_class = statistics.mode(labels)
 
