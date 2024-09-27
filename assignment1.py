@@ -58,7 +58,7 @@ def best_split(x, y, minleaf):
                     best_split_overall = split
                     best_left_child_indexes_overall = best_left_child_indexes
                     best_right_child_indexes_overall = best_right_child_indexes
-        return best_left_child_indexes_overall, best_right_child_indexes_overall
+        return best_left_child_indexes_overall, best_right_child_indexes_overall, best_split_overall, best_value_overall
     else:
         raise ValueError("Arrays must have the same size")
     
@@ -95,7 +95,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 # randomly select nfeat number of columns
                 candidate_splits = current_node.sample(n=nfeat, axis='columns')
                 # calculate best split and impurity reduction to get child nodes
-                child_node_left, child_node_right = best_split(candidate_splits, classes, minleaf)
+                child_node_left, child_node_right, split, value = best_split(candidate_splits, classes, minleaf)
                 # add rows of child nodes to be checked to nodelist
                 nodelist.append(x.iloc[child_node_left])
                 nodelist.append(x.iloc[child_node_right])
@@ -122,5 +122,5 @@ def tree_pred(x, tr):
     return predicted_labels
 
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
-Tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 2, 6)
+Tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5, 6)
 print(Tree)
