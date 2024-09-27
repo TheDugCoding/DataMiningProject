@@ -5,6 +5,19 @@ import pandas as pd
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 
+def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
+    return gini_index_calc(y) - (
+            len(y[indexes_left_child]) / len(y) * gini_index_calc(y[indexes_left_child]) + len(
+        y[indexes_right_child]) / len(y) * gini_index_calc(y[indexes_right_child]))
+
+def count_class_occurences(x, indexes):
+    if len(x) > 0:
+        number_of_items_per_class = sum(x[i] == 1 for i in indexes)
+        # return 1 if more than half of the elements are 1, else return 0
+        return 1 if number_of_items_per_class > len(indexes) / 2 else 0
+    else:
+        raise ValueError("Dataset is empty")
+
 def best_split(x, y, minleaf):
     best_impurity_reduction_overall = float('inf')
     best_value_overall = 0
@@ -24,13 +37,13 @@ def best_split(x, y, minleaf):
                 # check if there are only 2 values, then we don't need to calculate the average
                 if len(sorted_values) == 2:
                     best_left_child_indexes = x[split][x[split] == sorted_values[0]].index.tolist()
-                    best_right_child_indexes = list(set(x[split].index)- set(best_left_child_indexes))
-                    best_value = sorted_values[0]
-                    gini_index_left_child = gini_index_calc(y[best_left_child_indexes])
-                    gini_index_right_child = gini_index_calc(y[best_right_child_indexes])
-                    best_impurity_reduction = gini_index_calc(y) - (
-                            len(y[best_left_child_indexes]) / len(y) * gini_index_left_child + len(
-                        y[best_right_child_indexes]) / len(y) * gini_index_right_child)
+                    best_right_child_indexes = list(set(x[split].index) - set(best_left_child_indexes))
+                    # check that both children have enough elements
+                    if len(best_left_child_indexes) > minleaf and len(
+                        best_right_child_indexes) > minleaf:
+                        best_value = sorted_values[0]
+                        #calculate impurity reduction
+                        best_impurity_reduction = impurity_reduction_calc(y, best_left_child_indexes, best_right_child_indexes)
                 else:
                     for value_index in range(len(sorted_values - 1)):
                         # follows the x < c instructions, the variable avg is the average of two consecutive numbers
@@ -39,13 +52,8 @@ def best_split(x, y, minleaf):
                         # select all the indexes where x < c (left child), then select indexes for the right child
                         indexes_left_child = x[split][x[split] <= avg].index.tolist()
                         indexes_right_child = list(set(x[split].index)- set(indexes_left_child))
-                        # calculate gini index for the current split, for both children
-                        gini_index_left_child = gini_index_calc(y[indexes_left_child])
-                        gini_index_right_child = gini_index_calc(y[indexes_right_child])
-                        # calculate impurity reduction, lecture 2 slide 12
-                        impurity_reduction = gini_index_calc(y) - (
-                                len(y[indexes_left_child]) / len(y) * gini_index_left_child + len(
-                            y[indexes_right_child]) / len(y) * gini_index_right_child)
+                        # calculate impurity reduction
+                        impurity_reduction = impurity_reduction_calc(y, indexes_left_child, indexes_right_child)
                         if impurity_reduction < best_impurity_reduction and len(indexes_left_child) > minleaf and len(
                                 indexes_right_child) > minleaf:
                             best_impurity_reduction = impurity_reduction
@@ -61,7 +69,7 @@ def best_split(x, y, minleaf):
         return best_left_child_indexes_overall, best_right_child_indexes_overall, best_split_overall, best_value_overall
     else:
         raise ValueError("Arrays must have the same size")
-    
+
 def gini_index_calc(x):
     gini_index = 1
     for class_name, value in Counter(x).items():
@@ -100,12 +108,14 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 nodelist.append(x.iloc[child_node_left])
                 nodelist.append(x.iloc[child_node_right])
                 if (len(child_node_left) + len(child_node_right)) == 0:
+                    majority_class = count_class_occurences(y, current_node.index)
                     Tree[node, "leaf"] = current_node.index.to_list()
                 else:
                     Tree[node] = current_node.index.to_list()
                 node += 1
         else:
             if len(current_node) > 0:
+                majority_class = count_class_occurences(y, current_node.index)
                 Tree[node, "leaf"] = current_node.index.to_list()
                 node += 1
     return Tree
