@@ -181,5 +181,5 @@ print('\n\n--prediction single tree')
 print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], single_tree))
 
 #test prediction_b
-print('\n\n--prediction single tree')
+print('\n\n--prediction all trees')
 print(tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree))
