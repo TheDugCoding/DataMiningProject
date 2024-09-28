@@ -11,14 +11,6 @@ def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
             len(y[indexes_left_child]) / len(y) * gini_index_calc(y[indexes_left_child]) + len(
         y[indexes_right_child]) / len(y) * gini_index_calc(y[indexes_right_child]))
 
-def count_class_occurences(x, indexes):
-    if len(x) > 0:
-        number_of_items_per_class = sum(x[i] == 1 for i in indexes)
-        # return 1 if more than half of the elements are 1, else return 0
-        return 1 if number_of_items_per_class > len(indexes) / 2 else 0
-    else:
-        raise ValueError("Dataset is empty")
-
 def best_split(x, y, minleaf):
     best_impurity_reduction_overall = float('inf')
     best_value_overall = 0
@@ -35,7 +27,7 @@ def best_split(x, y, minleaf):
             sorted_values = np.sort(np.unique(x[split]))
             #check that we have enough different values for a split
             if len(sorted_values) > 1:
-                # check if there are only 2 values, then we don't need to calculate the average
+                # check if there are only 2 values, do the split by selecting one of the two values
                 if len(sorted_values) == 2:
                     best_left_child_indexes = x[split][x[split] == sorted_values[0]].index.tolist()
                     best_right_child_indexes = list(set(x[split].index) - set(best_left_child_indexes))
@@ -115,7 +107,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
         nodelist.pop(0)
 
-        # avoid splitting leaf nodes with zero impurity and there should be enough observations for a split
+        # avoid splitting leaf nodes with zero impurity and check that there are enough observations for a split
         if impurity(labels) > 0 and len(current_node_instances) > (2*nmin)-1:
 
             # early stopping: pure node
@@ -155,6 +147,7 @@ def tree_pred(x, tr):
     predicted_labels = []
     for index, row in x.iterrows():
         current_node = tr
+        # leaf node doesn't contain a feature
         while current_node.feature:
             if row[current_node.feature] < current_node.threshold:
                 current_node = current_node.left
