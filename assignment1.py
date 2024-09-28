@@ -2,6 +2,7 @@ import numpy as np
 import random
 from collections import Counter
 import pandas as pd
+import statistics
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 
@@ -87,38 +88,61 @@ def impurity(x):
     else:
         return 0
 
+class Node:
+    def __init__(self, instances, feature=None, threshold=None, left=[], right=[], predicted_class=None):
+        self.instances = instances
+        self.feature = feature
+        self.threshold = threshold
+        self.left = left
+        self.right = right
+        self.predicted_class = predicted_class
+
+
 def tree_grow(x, y, nmin, minleaf, nfeat):
-    node = 1
-    nodelist = [x]
-    Tree = {}
-    # possible nodes to check must exist
-    while len(nodelist) > 0:
+    root = Node(x)
+    nodelist = [root]
+
+    # tree grow stops when we split all the nodes, the nodes that cannot be split are removed from the list
+    while nodelist:
+        # visit the first node
         current_node = nodelist[0]
-        classes = y.iloc[current_node.index]
-        # classes = classes.to_list()
+
+        # store the node instances
+        current_node_instances = current_node.instances
+
+        # store node in the tree before splitting
+        labels = y.iloc[current_node_instances.index]
+
         nodelist.pop(0)
-        # check if impurity of class labels is not 0, else it cannot be split and is leaf node
-        if impurity(classes) > 0:
-            if current_node.shape[0] >= nmin:
-                # randomly select nfeat number of columns
-                candidate_splits = current_node.sample(n=nfeat, axis='columns')
+
+        # avoid splitting leaf nodes with zero impurity
+        if impurity(labels) > 0:
+
+            # early stopping: pure node
+            if current_node.instances.shape[0] >= nmin:
+                print
+                # random sample nfeat number of columns
+                candidate_features = current_node.instances.sample(n=nfeat, axis='columns')
+
                 # calculate best split and impurity reduction to get child nodes
-                child_node_left, child_node_right, split, value = best_split(candidate_splits, classes, minleaf)
-                # add rows of child nodes to be checked to nodelist
-                nodelist.append(x.iloc[child_node_left])
-                nodelist.append(x.iloc[child_node_right])
-                if (len(child_node_left) + len(child_node_right)) == 0:
-                    majority_class = count_class_occurences(y, current_node.index)
-                    Tree[node, "leaf"] = current_node.index.to_list()
-                else:
-                    Tree[node] = current_node.index.to_list()
-                node += 1
-        else:
-            if len(current_node) > 0:
-                majority_class = count_class_occurences(y, current_node.index)
-                Tree[node, "leaf"] = current_node.index.to_list()
-                node += 1
-    return Tree
+                left, right, feature, threshold = best_split(candidate_features, labels, minleaf)
+
+                # store current node info
+                current_node.left = Node(x.iloc[left], feature, threshold)
+                current_node.right = Node(x.iloc[right], feature, threshold)
+                current_node.threshold = threshold
+                current_node.feature = feature
+                current_node.predicted_class = statistics.mode(labels)
+
+                # update list
+                nodelist.append(current_node.left)
+                nodelist.append(current_node.right)
+
+        elif len(current_node_instances) > 0:
+            # return the final prediction of the leaf node
+            current_node.predicted_class = statistics.mode(labels)
+
+    return root
 
 def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
     # assignment states trees must be in list
@@ -128,9 +152,28 @@ def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
     return trees
 
 def tree_pred(x, tr):
-    predicted_labels = ''
+    predicted_labels = []
+    for index, row in x.iterrows():
+        current_node = tr
+        while current_node.feature:
+            if row[current_node.feature] < current_node.threshold:
+                current_node = current_node.left
+                print('left')
+            else:
+                current_node = current_node.right
+                print('right')
+        predicted_labels.append([index, current_node.predicted_class])
+
     return predicted_labels
 
+
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
-Tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5, 6)
-print(Tree)
+
+single_tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
+print(single_tree)
+
+ensamble_tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5, 6)
+print(ensamble_tree)
+
+#test prediction
+tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], single_tree)
