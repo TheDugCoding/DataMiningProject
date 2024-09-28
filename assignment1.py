@@ -115,8 +115,8 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
         nodelist.pop(0)
 
-        # avoid splitting leaf nodes with zero impurity
-        if impurity(labels) > 0:
+        # avoid splitting leaf nodes with zero impurity and there should be enough observations for a split
+        if impurity(labels) > 0 and len(current_node_instances) > (2*nmin)-1:
 
             # early stopping: pure node
             if current_node.instances.shape[0] >= nmin:
@@ -128,8 +128,8 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 left, right, feature, threshold = best_split(candidate_features, labels, minleaf)
 
                 # store current node info
-                current_node.left = Node(x.iloc[left], feature, threshold)
-                current_node.right = Node(x.iloc[right], feature, threshold)
+                current_node.left = Node(x.iloc[left])
+                current_node.right = Node(x.iloc[right])
                 current_node.threshold = threshold
                 current_node.feature = feature
                 current_node.predicted_class = statistics.mode(labels)
@@ -176,4 +176,5 @@ ensamble_tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_hea
 print(ensamble_tree)
 
 #test prediction
-tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], single_tree)
+print('\n\n--prediction single tree')
+print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], single_tree))
