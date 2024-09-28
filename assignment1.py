@@ -144,7 +144,18 @@ def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
     return trees
 
 def tree_pred(x, tr):
-    predicted_labels = ''
+    predicted_labels = []
+    for index, row in x.iterrows():
+        current_node = tr
+        while current_node.feature:
+            if row[current_node.feature] < current_node.threshold:
+                current_node = current_node.left
+                print('left')
+            else:
+                current_node = current_node.right
+                print('right')
+        predicted_labels.append([index, current_node.predicted_class])
+
     return predicted_labels
 
 
@@ -155,3 +166,6 @@ print(single_tree)
 
 ensamble_tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5, 6)
 print(ensamble_tree)
+
+#test prediction
+tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], single_tree)
