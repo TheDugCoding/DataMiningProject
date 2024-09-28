@@ -1,5 +1,5 @@
 import numpy as np
-import random
+from sklearn.utils import resample
 from collections import Counter
 import pandas as pd
 import statistics
@@ -136,11 +136,12 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
     return root
 
-def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
+def tree_grow_b(x, nmin, minleaf, nfeat, m):
     # assignment states trees must be in list
     trees = []
     for i in range(m):
-        trees.append(tree_grow(x, y, nmin, minleaf, nfeat))
+        bagging_sample = x.sample(n=len(x), replace=True).reset_index(drop=True)
+        trees.append(tree_grow(bagging_sample.loc[:, credit_data_with_headers.columns != 'class'], bagging_sample['class'], nmin, minleaf, nfeat))
     return trees
 
 def tree_pred(x, tr):
@@ -159,15 +160,26 @@ def tree_pred(x, tr):
 
     return predicted_labels
 
+def tree_pred_b(x, tr):
+    predicted_labels = []
+    for tree in tr:
+        predicted_labels.append(tree_pred(x, tree))
+
+    return predicted_labels
+
 
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
 
 single_tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
 print(single_tree)
 
-ensamble_tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5, 6)
+ensamble_tree = tree_grow_b(credit_data_with_headers, 2, 2, 5, 6)
 print(ensamble_tree)
 
 #test prediction
 print('\n\n--prediction single tree')
 print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], single_tree))
+
+#test prediction_b
+print('\n\n--prediction single tree')
+print(tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree))
