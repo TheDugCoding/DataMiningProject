@@ -113,7 +113,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
             # early stopping: pure node
             if current_node.instances.shape[0] >= nmin:
                 print
-                # random sample nfeat number of columns
+                # random sample nfeat number of columns (should we create the condition for the random forest?)
                 candidate_features = current_node.instances.sample(n=nfeat, axis='columns')
 
                 # calculate best split and impurity reduction to get child nodes
