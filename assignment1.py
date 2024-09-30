@@ -5,6 +5,18 @@ import pandas as pd
 import statistics
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
+eclipse_2 = pd.read_csv('data/eclipse-metrics-packages-2.0.csv', delimiter=';')
+eclipse_3 = pd.read_csv('data/eclipse-metrics-packages-3.0.csv', delimiter=';')
+
+# clean data for part 2
+features_data = ['pre', 'post', 'FOUT', 'MLOC', 'NBD', 'PAR', 'VG', 'NOF', 'NOM', 'NSF', 'NSM', 'ACD', 'NOI', 'NOT', 'TLOC', 'NOCU']
+keep_col_list = []
+for feature in features_data:
+    for col in eclipse_2.columns: 
+        if col.startswith(feature):
+            keep_col_list.append(col)
+training_data = eclipse_2[keep_col_list]
+test_data = eclipse_3[keep_col_list]
 
 def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
     return gini_index_calc(y) - (
@@ -183,3 +195,8 @@ print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns
 #test prediction_b
 print('\n\n--prediction all trees')
 print(tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree))
+
+# training
+train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, len(training_data.columns))
+test_tree = tree_pred(test_data.drop('post', axis=1).iloc[-2:], train_tree)
+print(test_tree)
