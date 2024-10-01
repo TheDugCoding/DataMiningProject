@@ -3,6 +3,7 @@ from sklearn.utils import resample
 from collections import Counter
 import pandas as pd
 import statistics
+from collections import defaultdict
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 eclipse_2 = pd.read_csv('data/eclipse-metrics-packages-2.0.csv', delimiter=';')
@@ -164,20 +165,31 @@ def tree_pred(x, tr):
         while current_node.feature:
             if row[current_node.feature] < current_node.threshold:
                 current_node = current_node.left
-                print('left')
+                #print('left')
             else:
                 current_node = current_node.right
-                print('right')
+                #print('right')
         predicted_labels.append([index, current_node.predicted_class])
 
     return predicted_labels
 
 def tree_pred_b(x, tr):
+    majority_votes = {}
     predicted_labels = []
     for tree in tr:
         predicted_labels.append(tree_pred(x, tree))
 
-    return predicted_labels
+    # Loop over the list of predicted labels (one list for each tree)
+    for tree_predictions in predicted_labels:
+        # Loop over the individual predictions in a tree
+        for index, prediction in tree_predictions:
+            if index not in majority_votes:
+                majority_votes[index] = 0
+            # Add 1 for '1', subtract 1 for '0'
+            majority_votes[index] += 1 if prediction == 1 else -1
+
+        # Return 1 if the sum is positive (more 1s), else 0 (more 0s or only 0)
+    return {index: 1 if vote > 0 else 0 for index, vote in majority_votes.items()}
 
 
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
@@ -194,9 +206,11 @@ print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns
 
 #test prediction_b
 print('\n\n--prediction all trees')
-print(tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree))
+predictions = tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree)
+print(predictions)
 
 # training
+print('\n\n--prediction single tree dataset')
 train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, len(training_data.columns))
-test_tree = tree_pred(test_data.drop('post', axis=1).iloc[-2:], train_tree)
-print(test_tree)
+predictions = tree_pred(test_data.drop('post', axis=1).iloc[-2:], train_tree)
+
