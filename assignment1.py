@@ -20,11 +20,13 @@ for feature in features_data:
             keep_col_list.append(col)
 training_data = eclipse_2[keep_col_list]
 test_data = eclipse_3[keep_col_list]
+training_data.loc[training_data['post'] > 0, 'post'] = 1
+test_data.loc[test_data['post'] > 0, 'post'] = 1
 
 def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
     return impurity(y) - (
-        ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) +
-        ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
+        ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) + ((len(
+        (y[indexes_right_child]) / len(y))) * impurity(y[indexes_right_child])))
 
 def best_split(x, y, minleaf):
     best_impurity_reduction_overall = float('-inf')
@@ -77,12 +79,6 @@ def best_split(x, y, minleaf):
         return best_left_child_indexes_overall, best_right_child_indexes_overall, best_split_overall, best_value_overall
     else:
         raise ValueError("Arrays must have the same size")
-
-def gini_index_calc(x):
-    gini_index = 1
-    for class_name, value in Counter(x).items():
-        gini_index *= (value/len(x))
-    return gini_index
 
 def impurity(x):
     if len(x) > 0:
@@ -232,17 +228,17 @@ print(pred_true)
 print('\n\n--prediction single tree dataset')
 train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, 41)
 test_tree = tree_pred(test_data.drop('post', axis=1), train_tree)
-pred_true = {'00': 0, '10': 0, '01': 0, '11': 0}
-# for i in range(len(test_tree)):
-#     # check whether class of original dataset is equal to predicted class
-#     if training_data['post'][i] == test_tree[i][1]:
-#         if test_tree[i][1] == 1:
-#             pred_true['11'] += 1
-#         else:
-#             pred_true['00'] += 1
-#     else:
-#         if test_tree[i][1] == 1:
-#             pred_true['10'] += 1
-#         else:
-#             pred_true['01'] += 1
-# print(test_tree)
+confusion_matrix = {'00': 0, '10': 0, '01': 0, '11': 0}
+for i in range(len(test_tree)):
+    # check whether pred (tree) and true data are equal
+    if test_tree[i][1] == 0:
+        if test_data['post'][i] == 0:
+            confusion_matrix['00'] += 1
+        if test_data['post'][i] > 0:
+            confusion_matrix['01'] += 1
+    if test_tree[i][1] > 0:
+        if test_data['post'][i] > 0:
+            confusion_matrix['11'] += 1
+        if test_data['post'][i] == 0:
+            confusion_matrix['10'] += 1
+print(confusion_matrix)
