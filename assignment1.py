@@ -196,10 +196,10 @@ def tree_pred_b(x, tr):
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
 
 single_tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
-print(single_tree)
+# print(single_tree)
 
 ensamble_tree = tree_grow_b(credit_data_with_headers, 'class', 2, 2, 5, 10)
-print(ensamble_tree)
+# print(ensamble_tree)
 
 #test prediction
 print('\n\n--prediction single tree')
@@ -208,7 +208,7 @@ print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns
 #test prediction_b
 print('\n\n--prediction all trees')
 predictions = tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree)
-print(predictions)
+# print(predictions)
 
 # test indians confusion matrix
 indians_tree = tree_grow(indians.drop('i', axis=1), indians['i'], 20, 5, 8)
@@ -230,5 +230,19 @@ print(pred_true)
 
 # training
 print('\n\n--prediction single tree dataset')
-train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, len(training_data.columns)-1)
-predictions_test = tree_pred(test_data.drop('post', axis=1), train_tree)
+train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, 41)
+test_tree = tree_pred(test_data.drop('post', axis=1), train_tree)
+pred_true = {'00': 0, '10': 0, '01': 0, '11': 0}
+# for i in range(len(test_tree)):
+#     # check whether class of original dataset is equal to predicted class
+#     if training_data['post'][i] == test_tree[i][1]:
+#         if test_tree[i][1] == 1:
+#             pred_true['11'] += 1
+#         else:
+#             pred_true['00'] += 1
+#     else:
+#         if test_tree[i][1] == 1:
+#             pred_true['10'] += 1
+#         else:
+#             pred_true['01'] += 1
+# print(test_tree)
