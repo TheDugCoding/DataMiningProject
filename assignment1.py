@@ -6,6 +6,7 @@ import statistics
 from collections import defaultdict
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
+indians = pd.read_csv('data/indians.txt', delimiter=',', names=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'])
 eclipse_2 = pd.read_csv('data/eclipse-metrics-packages-2.0.csv', delimiter=';')
 eclipse_3 = pd.read_csv('data/eclipse-metrics-packages-3.0.csv', delimiter=';')
 
@@ -209,8 +210,16 @@ print('\n\n--prediction all trees')
 predictions = tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree)
 print(predictions)
 
+# test indians confusion matrix
+indians_tree = tree_grow(indians.drop('i', axis=1), indians['i'], 20, 5, 8)
+indians_pred = tree_pred(indians.drop('i', axis=1), indians_tree)
+pred_true = {'00': 0, '10': 0, '01': 0, '11': 0}
+for i in indians_pred:
+    for j, k in i:
+        print(indians['i'].iloc[j])
+
 # training
 print('\n\n--prediction single tree dataset')
-train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, len(training_data.columns))
-predictions = tree_pred(test_data.drop('post', axis=1).iloc[-2:], train_tree)
+train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, len(training_data.columns)-1)
+predictions = tree_pred(test_data.drop('post', axis=1), train_tree)
 
