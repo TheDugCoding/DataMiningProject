@@ -224,21 +224,25 @@ for i in range(len(indians_pred)):
             pred_true['01'] += 1
 print(pred_true)
 
-# training
+# training - single tree
 print('\n\n--prediction single tree dataset')
 train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, 41)
 test_tree = tree_pred(test_data.drop('post', axis=1), train_tree)
-confusion_matrix = {'00': 0, '10': 0, '01': 0, '11': 0}
+confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
 for i in range(len(test_tree)):
     # check whether pred (tree) and true data are equal
     if test_tree[i][1] == 0:
         if test_data['post'][i] == 0:
-            confusion_matrix['00'] += 1
+            confusion_matrix['TN'] += 1
         if test_data['post'][i] > 0:
-            confusion_matrix['01'] += 1
+            confusion_matrix['FN'] += 1
     if test_tree[i][1] > 0:
         if test_data['post'][i] > 0:
-            confusion_matrix['11'] += 1
+            confusion_matrix['TP'] += 1
         if test_data['post'][i] == 0:
-            confusion_matrix['10'] += 1
-print(confusion_matrix)
+            confusion_matrix['FP'] += 1
+
+accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
+precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
+recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
+print(accuracy, precision, recall)
