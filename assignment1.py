@@ -25,8 +25,8 @@ test_data.loc[test_data['post'] > 0, 'post'] = 1
 
 def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
     return impurity(y) - (
-        ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) + ((len(
-        (y[indexes_right_child]) / len(y))) * impurity(y[indexes_right_child])))
+        ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) +
+        ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
 
 def best_split(x, y, minleaf):
     best_impurity_reduction_overall = float('-inf')
