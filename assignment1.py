@@ -214,17 +214,18 @@ print(predictions)
 indians_tree = tree_grow(indians.drop('i', axis=1), indians['i'], 20, 5, 8)
 indians_pred = tree_pred(indians.drop('i', axis=1), indians_tree)
 pred_true = {'00': 0, '10': 0, '01': 0, '11': 0}
-for i in indians_pred:
-    if indians['i'].iloc[i[0]] == indians_pred[i[0]][1]:
-        if i[1] == 0:
-            pred_true['00'] += 1
-        else:
+for i in range(len(indians_pred)):
+    # check whether class of original dataset is equal to predicted class
+    if indians['i'][i] == indians_pred[i][1]:
+        if indians_pred[i][1] == 1:
             pred_true['11'] += 1
-    else:
-        if i[1] == 0:
-            pred_true['01'] += 1
         else:
+            pred_true['00'] += 1
+    else:
+        if indians_pred[i][1] == 1:
             pred_true['10'] += 1
+        else:
+            pred_true['01'] += 1
 print(pred_true)
 
 # training
