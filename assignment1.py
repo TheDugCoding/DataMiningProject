@@ -22,12 +22,12 @@ training_data = eclipse_2[keep_col_list]
 test_data = eclipse_3[keep_col_list]
 
 def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
-    return gini_index_calc(y) - (
-        ((len(y[indexes_left_child]) / len(y)) * gini_index_calc(y[indexes_left_child])) + ((len(
-        (y[indexes_right_child]) / len(y))) * gini_index_calc(y[indexes_right_child])))
+    return impurity(y) - (
+        ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) +
+        ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
 
 def best_split(x, y, minleaf):
-    best_impurity_reduction_overall = float('inf')
+    best_impurity_reduction_overall = float('-inf')
     best_value_overall = 0
     best_split_overall = ''
     best_left_child_indexes_overall = []
@@ -35,7 +35,7 @@ def best_split(x, y, minleaf):
 
     if len(x) == len(y):
         for split in x.columns:
-            best_impurity_reduction = float('inf')
+            best_impurity_reduction = float('-inf')
             best_value = 0
             best_left_child_indexes = []
             best_right_child_indexes = []
@@ -62,13 +62,13 @@ def best_split(x, y, minleaf):
                         indexes_right_child = list(set(x[split].index)- set(indexes_left_child))
                         # calculate impurity reduction
                         impurity_reduction = impurity_reduction_calc(y, indexes_left_child, indexes_right_child)
-                        if impurity_reduction < best_impurity_reduction and len(indexes_left_child) > minleaf and len(
+                        if impurity_reduction > best_impurity_reduction and len(indexes_left_child) > minleaf and len(
                                 indexes_right_child) > minleaf:
                             best_impurity_reduction = impurity_reduction
                             best_value = avg
                             best_left_child_indexes = indexes_left_child
                             best_right_child_indexes = indexes_right_child
-                if best_impurity_reduction < best_impurity_reduction_overall:
+                if best_impurity_reduction > best_impurity_reduction_overall:
                     best_impurity_reduction_overall = best_impurity_reduction
                     best_value_overall = best_value
                     best_split_overall = split
