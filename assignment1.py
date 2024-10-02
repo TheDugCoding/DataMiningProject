@@ -149,12 +149,12 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
     return root
 
-def tree_grow_b(x, nmin, minleaf, nfeat, m):
+def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     # assignment states trees must be in list
     trees = []
     for i in range(m):
         bagging_sample = x.sample(n=len(x), replace=True).reset_index(drop=True)
-        trees.append(tree_grow(bagging_sample.loc[:, credit_data_with_headers.columns != 'class'], bagging_sample['class'], nmin, minleaf, nfeat))
+        trees.append(tree_grow(bagging_sample.loc[:, bagging_sample.columns != target_feature], bagging_sample[target_feature], nmin, minleaf, nfeat))
     return trees
 
 def tree_pred(x, tr):
@@ -197,7 +197,7 @@ def tree_pred_b(x, tr):
 single_tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
 print(single_tree)
 
-ensamble_tree = tree_grow_b(credit_data_with_headers, 2, 2, 5, 6)
+ensamble_tree = tree_grow_b(credit_data_with_headers, 'class', 2, 2, 5, 100)
 print(ensamble_tree)
 
 #test prediction
