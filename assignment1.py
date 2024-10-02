@@ -215,11 +215,19 @@ indians_tree = tree_grow(indians.drop('i', axis=1), indians['i'], 20, 5, 8)
 indians_pred = tree_pred(indians.drop('i', axis=1), indians_tree)
 pred_true = {'00': 0, '10': 0, '01': 0, '11': 0}
 for i in indians_pred:
-    for j, k in i:
-        print(indians['i'].iloc[j])
+    if indians['i'].iloc[i[0]] == indians_pred[i[0]][1]:
+        if i[1] == 0:
+            pred_true['00'] += 1
+        else:
+            pred_true['11'] += 1
+    else:
+        if i[1] == 0:
+            pred_true['01'] += 1
+        else:
+            pred_true['10'] += 1
+print(pred_true)
 
 # training
 print('\n\n--prediction single tree dataset')
 train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, len(training_data.columns)-1)
-predictions = tree_pred(test_data.drop('post', axis=1), train_tree)
-
+predictions_test = tree_pred(test_data.drop('post', axis=1), train_tree)
