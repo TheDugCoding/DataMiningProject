@@ -9,6 +9,7 @@ credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 indians = pd.read_csv('data/indians.txt', delimiter=',', names=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'])
 eclipse_2 = pd.read_csv('data/eclipse-metrics-packages-2.0.csv', delimiter=';')
 eclipse_3 = pd.read_csv('data/eclipse-metrics-packages-3.0.csv', delimiter=';')
+diabetes = pd.read_csv('data/diabetes.csv', delimiter=',')
 
 # clean data for part 2
 features_data = ['pre', 'post', 'FOUT', 'MLOC', 'NBD', 'PAR', 'VG', 'NOF', 'NOM', 'NSF', 'NSM', 'ACD', 'NOI', 'NOT', 'TLOC', 'NOCU']
@@ -21,9 +22,9 @@ training_data = eclipse_2[keep_col_list]
 test_data = eclipse_3[keep_col_list]
 
 def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
-    return gini_index_calc(y) - (
-            len(y[indexes_left_child]) / len(y) * gini_index_calc(y[indexes_left_child]) + len(
-        y[indexes_right_child]) / len(y) * gini_index_calc(y[indexes_right_child]))
+    return impurity(y) - (
+        ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) + ((len(
+        (y[indexes_right_child]) / len(y))) * impurity(y[indexes_right_child])))
 
 def best_split(x, y, minleaf):
     best_impurity_reduction_overall = float('inf')
@@ -126,7 +127,6 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
             # early stopping: pure node
             if current_node.instances.shape[0] >= nmin:
-                print
                 # random sample nfeat number of columns (should we create the condition for the random forest?)
                 candidate_features = current_node.instances.sample(n=nfeat, axis='columns')
 
@@ -198,12 +198,12 @@ def tree_pred_b(x, tr):
 single_tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
 print(single_tree)
 
-ensamble_tree = tree_grow_b(credit_data_with_headers, 'class', 2, 2, 5, 100)
+ensamble_tree = tree_grow_b(credit_data_with_headers, 'class', 2, 2, 5, 10)
 print(ensamble_tree)
 
 #test prediction
 print('\n\n--prediction single tree')
-print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], single_tree))
+print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], single_tree))
 
 #test prediction_b
 print('\n\n--prediction all trees')
