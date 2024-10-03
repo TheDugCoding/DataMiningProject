@@ -47,37 +47,27 @@ def best_split(x, y, minleaf):
             #check that we have enough different values for a split
             if len(sorted_values) > 1:
                 # check if there are only 2 values, do the split by selecting one of the two values
-                if len(sorted_values) == 2:
-                    best_left_child_indexes = x[split][x[split] == sorted_values[0]].index.tolist()
-                    best_right_child_indexes = list(set(x[split].index) - set(best_left_child_indexes))
-                    # check that both children have enough elements
-                    if len(best_left_child_indexes) > minleaf and len(
-                        best_right_child_indexes) > minleaf:
-                        best_value = sorted_values[0]
-                        #calculate impurity reduction
-                        best_impurity_reduction = impurity_reduction_calc(y, best_left_child_indexes, best_right_child_indexes)
-                else:
-                    for value_index in range(len(sorted_values - 1)):
-                        # follows the x < c instructions, the variable avg is the average of two consecutive numbers
-                        avg = sum(sorted_values[value_index:value_index + 2]) / len(
-                            sorted_values[value_index:value_index + 2])
-                        # select all the indexes where x < c (left child), then select indexes for the right child
-                        indexes_left_child = x[split][x[split] <= avg].index.tolist()
-                        indexes_right_child = list(set(x[split].index)- set(indexes_left_child))
-                        # calculate impurity reduction
-                        impurity_reduction = impurity_reduction_calc(y, indexes_left_child, indexes_right_child)
-                        if impurity_reduction > best_impurity_reduction and len(indexes_left_child) > minleaf and len(
-                                indexes_right_child) > minleaf:
-                            best_impurity_reduction = impurity_reduction
-                            best_value = avg
-                            best_left_child_indexes = indexes_left_child
-                            best_right_child_indexes = indexes_right_child
-                if best_impurity_reduction > best_impurity_reduction_overall:
-                    best_impurity_reduction_overall = best_impurity_reduction
-                    best_value_overall = best_value
-                    best_split_overall = split
-                    best_left_child_indexes_overall = best_left_child_indexes
-                    best_right_child_indexes_overall = best_right_child_indexes
+                for value_index in range(len(sorted_values) -1):
+                    # follows the x < c instructions, the variable avg is the average of two consecutive numbers
+                    avg = sum(sorted_values[value_index:value_index + 2]) / len(
+                        sorted_values[value_index:value_index + 2])
+                    # select all the indexes where x < c (left child), then select indexes for the right child
+                    indexes_left_child = x[split][x[split] <= avg].index.tolist()
+                    indexes_right_child = list(set(x[split].index)- set(indexes_left_child))
+                    # calculate impurity reduction
+                    impurity_reduction = impurity_reduction_calc(y, indexes_left_child, indexes_right_child)
+                    if impurity_reduction > best_impurity_reduction and len(indexes_left_child) > minleaf and len(
+                            indexes_right_child) > minleaf:
+                        best_impurity_reduction = impurity_reduction
+                        best_value = avg
+                        best_left_child_indexes = indexes_left_child
+                        best_right_child_indexes = indexes_right_child
+            if best_impurity_reduction > best_impurity_reduction_overall:
+                best_impurity_reduction_overall = best_impurity_reduction
+                best_value_overall = best_value
+                best_split_overall = split
+                best_left_child_indexes_overall = best_left_child_indexes
+                best_right_child_indexes_overall = best_right_child_indexes
         return best_left_child_indexes_overall, best_right_child_indexes_overall, best_split_overall, best_value_overall
     else:
         raise ValueError("Arrays must have the same size")
@@ -104,27 +94,27 @@ class Node:
 
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
-    root = Node(x)
-    nodelist = [root]
 
-    # tree grow stops when we split all the nodes, the nodes that cannot be split are removed from the list
-    while nodelist:
-        # visit the first node
-        current_node = nodelist[0]
+    if not x.empty:
+        root = Node(x)
+        nodelist = [root]
 
-        # store the node instances
-        current_node_instances = current_node.instances
+        # tree grow stops when we split all the nodes, the nodes that cannot be split are removed from the list
+        while nodelist:
+            # visit the first node
+            current_node = nodelist[0]
 
-        # store node in the tree before splitting
-        labels = y.iloc[current_node_instances.index]
+            # store the node instances
+            current_node_instances = current_node.instances
 
-        nodelist.pop(0)
+            # store node in the tree before splitting
+            labels = y.iloc[current_node_instances.index]
 
-        # avoid splitting leaf nodes with zero impurity and check that there are enough observations for a split
-        if impurity(labels) > 0 and len(current_node_instances) > (2*nmin)-1:
+            nodelist.pop(0)
 
-            # early stopping: pure node
-            if current_node.instances.shape[0] >= nmin:
+            # avoid splitting leaf nodes with zero impurity and check that there are enough observations for a split
+            if impurity(labels) > 0 and current_node.instances.shape[0] >= nmin:
+
                 # random sample nfeat number of columns (should we create the condition for the random forest?)
                 candidate_features = current_node.instances.sample(n=nfeat, axis='columns')
 
@@ -132,21 +122,22 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 left, right, feature, threshold = best_split(candidate_features, labels, minleaf)
 
                 # store current node info
-                current_node.left = Node(x.iloc[left])
-                current_node.right = Node(x.iloc[right])
-                current_node.threshold = threshold
-                current_node.feature = feature
+                if feature:
+                    current_node.left = Node(x.iloc[left])
+                    current_node.right = Node(x.iloc[right])
+                    # update list
+                    nodelist.append(current_node.left)
+                    nodelist.append(current_node.right)
+                    current_node.threshold = threshold
+                    current_node.feature = feature
                 current_node.predicted_class = statistics.mode(labels)
 
-                # update list
-                nodelist.append(current_node.left)
-                nodelist.append(current_node.right)
-
-        elif len(current_node_instances) > 0:
-            # return the final prediction of the leaf node
-            current_node.predicted_class = statistics.mode(labels)
-
-    return root
+            else:
+                # return the final prediction of the leaf node
+                current_node.predicted_class = statistics.mode(labels)
+        return root
+    else:
+        raise ValueError("x is empty")
 
 def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     # assignment states trees must be in list
