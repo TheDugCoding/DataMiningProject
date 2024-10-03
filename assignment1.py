@@ -22,6 +22,8 @@ training_data = eclipse_2[keep_col_list]
 test_data = eclipse_3[keep_col_list]
 training_data.loc[training_data['post'] > 0, 'post'] = 1
 test_data.loc[test_data['post'] > 0, 'post'] = 1
+training_features = training_data.drop('post', axis=1)
+test_features = test_data.drop('post', axis=1)
 
 def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
     return impurity(y) - (
@@ -152,6 +154,7 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     for i in range(m):
         bagging_sample = x.sample(n=len(x), replace=True).reset_index(drop=True)
         trees.append(tree_grow(bagging_sample.loc[:, bagging_sample.columns != target_feature], bagging_sample[target_feature], nmin, minleaf, nfeat))
+        print(i)
     return trees
 
 def tree_pred(x, tr):
@@ -226,8 +229,8 @@ print(pred_true)
 
 # training - single tree
 print('\n\n--prediction single tree dataset')
-train_tree = tree_grow(training_data.drop('post', axis=1), training_data['post'], 15, 5, 41)
-test_tree = tree_pred(test_data.drop('post', axis=1), train_tree)
+train_tree = tree_grow(training_features, training_data['post'], 15, 5, 41)
+test_tree = tree_pred(test_features, train_tree)
 confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
 for i in range(len(test_tree)):
     # check whether pred (tree) and true data are equal
@@ -237,6 +240,29 @@ for i in range(len(test_tree)):
         if test_data['post'][i] > 0:
             confusion_matrix['FN'] += 1
     if test_tree[i][1] > 0:
+        if test_data['post'][i] > 0:
+            confusion_matrix['TP'] += 1
+        if test_data['post'][i] == 0:
+            confusion_matrix['FP'] += 1
+
+accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
+precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
+recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
+print(accuracy, precision, recall)
+
+# training - bagging
+print('\n\n--prediction bagging dataset')
+train_bagging = tree_grow_b(training_data, 'post', 15, 5, 41, 100)
+test_bagging = tree_pred_b(test_data, train_bagging)
+confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+for i in range(len(test_bagging)):
+    # check whether pred (tree) and true data are equal
+    if test_bagging[i][1] == 0:
+        if test_data['post'][i] == 0:
+            confusion_matrix['TN'] += 1
+        if test_data['post'][i] > 0:
+            confusion_matrix['FN'] += 1
+    if test_bagging[i][1] > 0:
         if test_data['post'][i] > 0:
             confusion_matrix['TP'] += 1
         if test_data['post'][i] == 0:
