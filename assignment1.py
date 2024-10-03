@@ -111,7 +111,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
             nodelist.pop(0)
 
             # avoid splitting leaf nodes with zero impurity and check that there are enough observations for a split
-            if impurity(labels) > 0 and len(current_node_instances) > (2*minleaf)-1 and current_node.instances.shape[0] >= nmin:
+            if impurity(labels) > 0 and current_node.instances.shape[0] >= nmin:
 
                 # random sample nfeat number of columns (should we create the condition for the random forest?)
                 candidate_features = current_node.instances.sample(n=nfeat, axis='columns')
