@@ -191,6 +191,34 @@ def tree_pred_b(x, tr):
         # Return 1 if the sum is positive (more 1s), else 0 (more 0s or only 0)
     return {index: 1 if vote > 0 else 0 for index, vote in majority_votes.items()}
 
+def print_tree(node, level=0, side="root"):
+    """ Recursively print the structure of the decision tree. """
+    if node is None:
+        print("The tree is empty.")
+        return
+
+    indent = "   " * level  # Indentation for visual representation
+
+    # Check if node is a leaf
+    if node != []:
+        if node.left is None and node.right is None:
+            # Leaf node: print predicted class and number of instances
+            print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}")
+        else:
+            # Internal node: print splitting feature and threshold
+            print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}")
+
+            # Recursively print the left and right subtrees
+            if node.left is not None:
+                print_tree(node.left, level + 1, "left")
+            else:
+                print(f"{indent}   - left [Empty]")  # Show if the left child is missing
+
+            if node.right is not None:
+                print_tree(node.right, level + 1, "right")
+            else:
+                print(f"{indent}   - right [Empty]")  # Show if the right child is missing
+
 
 #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
 
