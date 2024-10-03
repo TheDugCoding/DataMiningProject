@@ -248,7 +248,7 @@ for i in range(len(test_tree)):
 accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
 precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
 recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
-print(accuracy, precision, recall)
+print('single tree', accuracy, precision, recall)
 
 # training - bagging
 print('\n\n--prediction bagging dataset')
@@ -271,4 +271,27 @@ for i in range(len(test_bagging)):
 accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
 precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
 recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
-print(accuracy, precision, recall)
+print('bagging', accuracy, precision, recall)
+
+# training - random forest
+print('\n\n--prediction bagging dataset')
+train_random = tree_grow_b(training_data, 'post', 15, 5, 6, 100)
+test_random = tree_pred_b(test_data, train_bagging)
+confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+for i in range(len(test_bagging)):
+    # check whether pred (tree) and true data are equal
+    if test_random[i] == 0:
+        if test_data['post'][i] == 0:
+            confusion_matrix['TN'] += 1
+        if test_data['post'][i] > 0:
+            confusion_matrix['FN'] += 1
+    if test_random[i] > 0:
+        if test_data['post'][i] > 0:
+            confusion_matrix['TP'] += 1
+        if test_data['post'][i] == 0:
+            confusion_matrix['FP'] += 1
+
+accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
+precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
+recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
+print('random forest', accuracy, precision, recall)
