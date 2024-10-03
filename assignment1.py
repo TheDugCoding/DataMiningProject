@@ -45,18 +45,6 @@ def best_split(x, y, minleaf):
             #check that we have enough different values for a split
             if len(sorted_values) > 1:
                 # check if there are only 2 values, do the split by selecting one of the two values
-                '''
-                if len(sorted_values) == 2:
-                    best_left_child_indexes = x[split][x[split] == sorted_values[0]].index.tolist()
-                    best_right_child_indexes = list(set(x[split].index) - set(best_left_child_indexes))
-                    # check that both children have enough elements
-                    if len(best_left_child_indexes) > minleaf and len(
-                        best_right_child_indexes) > minleaf:
-                        best_value = sorted_values[0]
-                        #calculate impurity reduction
-                        best_impurity_reduction = impurity_reduction_calc(y, best_left_child_indexes, best_right_child_indexes)
-                else:
-                '''
                 for value_index in range(len(sorted_values) -1):
                     # follows the x < c instructions, the variable avg is the average of two consecutive numbers
                     avg = sum(sorted_values[value_index:value_index + 2]) / len(
