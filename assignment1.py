@@ -257,12 +257,12 @@ test_bagging = tree_pred_b(test_data, train_bagging)
 confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
 for i in range(len(test_bagging)):
     # check whether pred (tree) and true data are equal
-    if test_bagging[i][1] == 0:
+    if test_bagging[i] == 0:
         if test_data['post'][i] == 0:
             confusion_matrix['TN'] += 1
         if test_data['post'][i] > 0:
             confusion_matrix['FN'] += 1
-    if test_bagging[i][1] > 0:
+    if test_bagging[i] > 0:
         if test_data['post'][i] > 0:
             confusion_matrix['TP'] += 1
         if test_data['post'][i] == 0:
