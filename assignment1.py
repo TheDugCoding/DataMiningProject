@@ -169,7 +169,7 @@ def tree_pred(x, tr):
             else:
                 current_node = current_node.right
                 #print('right')
-        predicted_labels.append([index, current_node.predicted_class])
+        predicted_labels.append(current_node.predicted_class)
 
     return predicted_labels
 
@@ -182,11 +182,11 @@ def tree_pred_b(x, tr):
     # Loop over the list of predicted labels (one list for each tree)
     for tree_predictions in predicted_labels:
         # Loop over the individual predictions in a tree
-        for index, prediction in tree_predictions:
-            if index not in majority_votes:
-                majority_votes[index] = 0
+        for i in range(len(tree_predictions)):
+            if i not in majority_votes:
+                majority_votes[i] = 0
             # Add 1 for '1', subtract 1 for '0'
-            majority_votes[index] += 1 if prediction == 1 else -1
+            majority_votes[i] += 1 if i == 1 else -1
 
         # Return 1 if the sum is positive (more 1s), else 0 (more 0s or only 0)
     return {index: 1 if vote > 0 else 0 for index, vote in majority_votes.items()}
@@ -243,13 +243,13 @@ indians_pred = tree_pred(indians.drop('i', axis=1), indians_tree)
 pred_true = {'00': 0, '10': 0, '01': 0, '11': 0}
 for i in range(len(indians_pred)):
     # check whether class of original dataset is equal to predicted class
-    if indians['i'][i] == indians_pred[i][1]:
-        if indians_pred[i][1] == 1:
+    if indians['i'][i] == indians_pred[i]:
+        if indians_pred[i] == 1:
             pred_true['11'] += 1
         else:
             pred_true['00'] += 1
     else:
-        if indians_pred[i][1] == 1:
+        if indians_pred[i] == 1:
             pred_true['10'] += 1
         else:
             pred_true['01'] += 1
@@ -262,12 +262,12 @@ test_tree = tree_pred(test_features, train_tree)
 confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
 for i in range(len(test_tree)):
     # check whether pred (tree) and true data are equal
-    if test_tree[i][1] == 0:
+    if test_tree[i] == 0:
         if test_data['post'][i] == 0:
             confusion_matrix['TN'] += 1
         if test_data['post'][i] > 0:
             confusion_matrix['FN'] += 1
-    if test_tree[i][1] > 0:
+    if test_tree[i] > 0:
         if test_data['post'][i] > 0:
             confusion_matrix['TP'] += 1
         if test_data['post'][i] == 0:
