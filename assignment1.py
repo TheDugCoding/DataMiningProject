@@ -177,7 +177,7 @@ def tree_pred_b(x, tr):
             if i not in majority_votes:
                 majority_votes[i] = 0
             # Add 1 for '1', subtract 1 for '0'
-            majority_votes[i] += 1 if i == 1 else -1
+            majority_votes[i] += 1 if tree_predictions[i] == 1 else -1
 
         # Return 1 if the sum is positive (more 1s), else 0 (more 0s or only 0)
     return {index: 1 if vote > 0 else 0 for index, vote in majority_votes.items()}
@@ -297,9 +297,9 @@ print(confusion_matrix)
 # training - random forest
 print('\n\n--prediction bagging dataset')
 train_random = tree_grow_b(training_data, 'post', 15, 5, 6, 100)
-test_random = tree_pred_b(test_data, train_bagging)
+test_random = tree_pred_b(test_data, train_random)
 confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-for i in range(len(test_bagging)):
+for i in range(len(test_random)):
     # check whether pred (tree) and true data are equal
     if test_random[i] == 0:
         if test_data['post'][i] == 0:
