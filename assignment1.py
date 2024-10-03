@@ -249,6 +249,7 @@ accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
 precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
 recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
 print('single tree', accuracy, precision, recall)
+print(confusion_matrix)
 
 # training - bagging
 print('\n\n--prediction bagging dataset')
@@ -272,6 +273,7 @@ accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
 precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
 recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
 print('bagging', accuracy, precision, recall)
+print(confusion_matrix)
 
 # training - random forest
 print('\n\n--prediction bagging dataset')
@@ -295,3 +297,4 @@ accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
 precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
 recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
 print('random forest', accuracy, precision, recall)
+print(confusion_matrix)
