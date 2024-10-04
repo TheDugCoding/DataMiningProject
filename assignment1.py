@@ -35,47 +35,38 @@ def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
         ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
 
 def best_split(x, y, minleaf):
-    best_impurity_reduction_overall = float('-inf')
-    best_value_overall = 0
-    best_split_overall = ''
-    best_left_child_indexes_overall = []
-    best_right_child_indexes_overall = []
+    best_impurity_reduction = float('-inf')
+    best_value = 0
+    best_left_child_indexes = []
+    best_right_child_indexes = []
+    best_split = ''
+    impurity_father = impurity(y)
 
     if len(x) == len(y):
         for split in x.columns:
-            best_impurity_reduction = float('-inf')
-            best_value = 0
-            best_left_child_indexes = []
-            best_right_child_indexes = []
             sorted_values = np.sort(np.unique(x[split]))
-            impurity_father = impurity(y)
+
             #check that we have enough different values for a split
             if len(sorted_values) > 1:
                 # check if there are only 2 values, do the split by selecting one of the two values
                 for value_index in range(len(sorted_values) -1):
                     # follows the x < c instructions, the variable avg is the average of two consecutive numbers
-                    avg = sum(sorted_values[value_index:value_index + 2]) / len(
-                        sorted_values[value_index:value_index + 2])
+                    avg = (sorted_values[value_index] + sorted_values[value_index + 1]) / 2
                     # select all the indexes where x < c (left child), then select indexes for the right child
-                    indexes_left_child = x[split][x[split] <= avg].index.tolist()
-                    indexes_right_child = list(set(x[split].index)- set(indexes_left_child))
-                    # calculate impurity reduction
-                    impurity_reduction = impurity_father - (
-                        ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) +
-                        ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
-                    if impurity_reduction > best_impurity_reduction and len(indexes_left_child) > minleaf and len(
-                            indexes_right_child) > minleaf:
-                        best_impurity_reduction = impurity_reduction
-                        best_value = avg
-                        best_left_child_indexes = indexes_left_child
-                        best_right_child_indexes = indexes_right_child
-            if best_impurity_reduction > best_impurity_reduction_overall:
-                best_impurity_reduction_overall = best_impurity_reduction
-                best_value_overall = best_value
-                best_split_overall = split
-                best_left_child_indexes_overall = best_left_child_indexes
-                best_right_child_indexes_overall = best_right_child_indexes
-        return best_left_child_indexes_overall, best_right_child_indexes_overall, best_split_overall, best_value_overall
+                    indexes_left_child = x.index[x[split] <= avg]
+                    indexes_right_child = x.index[x[split] > avg]
+                    if len(indexes_left_child) > minleaf and len(indexes_right_child) > minleaf:
+                        # calculate impurity reduction
+                        impurity_reduction = impurity_father - (
+                                ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) +
+                                ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
+                        if impurity_reduction > best_impurity_reduction:
+                            best_impurity_reduction = impurity_reduction
+                            best_split = split
+                            best_value = avg
+                            best_left_child_indexes = indexes_left_child
+                            best_right_child_indexes = indexes_right_child
+        return best_left_child_indexes, best_right_child_indexes, best_split, best_value
     else:
         raise ValueError("Arrays must have the same size")
 
