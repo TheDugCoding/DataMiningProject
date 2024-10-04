@@ -136,8 +136,8 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
                 # store current node info
                 if feature:
-                    current_node.left = Node(left, father=current_node)
-                    current_node.right = Node(right, father=current_node)
+                    current_node.left = Node(left)
+                    current_node.right = Node(right)
                     # update list
                     nodelist.append(current_node.left)
                     nodelist.append(current_node.right)
@@ -283,24 +283,24 @@ if __name__ == '__main__':
                 pred_true['01'] += 1
     print(pred_true)
 
-# training - single tree
-print('\n\n--prediction single tree dataset')
-train_tree = tree_grow(training_features, training_data['post'], 15, 5, 41)
-test_tree = tree_pred(test_features, train_tree)
+    # training - single tree
+    print('\n\n--prediction single tree dataset')
+    train_tree = tree_grow(training_features, training_data['post'], 15, 5, 41)
+    test_tree = tree_pred(test_features, train_tree)
 
-confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-for i in range(len(test_tree)):
-    # check whether pred (tree) and true data are equal
-    if test_tree[i] == 0:
-        if test_data['post'][i] == 0:
-            confusion_matrix['TN'] += 1
-        if test_data['post'][i] > 0:
-            confusion_matrix['FN'] += 1
-    if test_tree[i] > 0:
-        if test_data['post'][i] > 0:
-            confusion_matrix['TP'] += 1
-        if test_data['post'][i] == 0:
-            confusion_matrix['FP'] += 1
+    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+    for i in range(len(test_tree)):
+        # check whether pred (tree) and true data are equal
+        if test_tree[i] == 0:
+            if test_data['post'][i] == 0:
+                confusion_matrix['TN'] += 1
+            if test_data['post'][i] > 0:
+                confusion_matrix['FN'] += 1
+        if test_tree[i] > 0:
+            if test_data['post'][i] > 0:
+                confusion_matrix['TP'] += 1
+            if test_data['post'][i] == 0:
+                confusion_matrix['FP'] += 1
 
     accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
     precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
@@ -309,23 +309,23 @@ for i in range(len(test_tree)):
     print(confusion_matrix)
 
 
-# training - bagging
-print('\n\n--prediction bagging dataset')
-train_bagging = tree_grow_b(training_data, 'post', 15, 5, 41, 100)
-test_bagging = tree_pred_b(test_data, train_bagging)
-confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-for i in range(len(test_bagging)):
-    # check whether pred (tree) and true data are equal
-    if test_bagging[i] == 0:
-        if test_data['post'][i] == 0:
-            confusion_matrix['TN'] += 1
-        if test_data['post'][i] > 0:
-            confusion_matrix['FN'] += 1
-    if test_bagging[i] > 0:
-        if test_data['post'][i] > 0:
-            confusion_matrix['TP'] += 1
-        if test_data['post'][i] == 0:
-            confusion_matrix['FP'] += 1
+    # training - bagging
+    print('\n\n--prediction bagging dataset')
+    train_bagging = tree_grow_b(training_data, 'post', 15, 5, 41, 100)
+    test_bagging = tree_pred_b(test_data, train_bagging)
+    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+    for i in range(len(test_bagging)):
+        # check whether pred (tree) and true data are equal
+        if test_bagging[i] == 0:
+            if test_data['post'][i] == 0:
+                confusion_matrix['TN'] += 1
+            if test_data['post'][i] > 0:
+                confusion_matrix['FN'] += 1
+        if test_bagging[i] > 0:
+            if test_data['post'][i] > 0:
+                confusion_matrix['TP'] += 1
+            if test_data['post'][i] == 0:
+                confusion_matrix['FP'] += 1
 
     accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
     precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
@@ -403,4 +403,4 @@ def print_tree(single_credit=False, ensamble_credit=False, single_indians=False,
 
 #print_tree(single_credit=single_tree, ensamble_credit=False, single_indians=indians_tree, single_eclipse=train_tree, bagging=False, random_forest=False)
 #print_tree(single_credit=single_tree, ensamble_credit=ensamble_tree, single_indians=False, single_eclipse=False, bagging=False, random_forest=False)
-print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=train_tree, bagging=False, random_forest=False)
+#print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=train_tree, bagging=False, random_forest=False)
