@@ -91,13 +91,12 @@ def impurity(x):
         return 0
 
 class Node:
-    def __init__(self, instances, feature=None, threshold=None, left=[], right=[], father=None, predicted_class=None):
+    def __init__(self, instances, feature=None, threshold=None, left=None, right=None, predicted_class=None):
         self.instances = instances
         self.feature = feature
         self.threshold = threshold
         self.left = left
         self.right = right
-        self.father = father
         self.predicted_class = predicted_class
 
 class Tree:
@@ -284,23 +283,24 @@ if __name__ == '__main__':
                 pred_true['01'] += 1
     print(pred_true)
 
-    # training - single tree
-    print('\n\n--prediction single tree dataset')
-    train_tree = tree_grow(training_features, training_data['post'], 15, 5, 41)
-    test_tree = tree_pred(test_features, train_tree)
-    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-    for i in range(len(test_tree)):
-        # check whether pred (tree) and true data are equal
-        if test_tree[i] == 0:
-            if test_data['post'][i] == 0:
-                confusion_matrix['TN'] += 1
-            if test_data['post'][i] > 0:
-                confusion_matrix['FN'] += 1
-        if test_tree[i] > 0:
-            if test_data['post'][i] > 0:
-                confusion_matrix['TP'] += 1
-            if test_data['post'][i] == 0:
-                confusion_matrix['FP'] += 1
+# training - single tree
+print('\n\n--prediction single tree dataset')
+train_tree = tree_grow(training_features, training_data['post'], 15, 5, 41)
+test_tree = tree_pred(test_features, train_tree)
+
+confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+for i in range(len(test_tree)):
+    # check whether pred (tree) and true data are equal
+    if test_tree[i] == 0:
+        if test_data['post'][i] == 0:
+            confusion_matrix['TN'] += 1
+        if test_data['post'][i] > 0:
+            confusion_matrix['FN'] += 1
+    if test_tree[i] > 0:
+        if test_data['post'][i] > 0:
+            confusion_matrix['TP'] += 1
+        if test_data['post'][i] == 0:
+            confusion_matrix['FP'] += 1
 
     accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
     precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
@@ -308,23 +308,24 @@ if __name__ == '__main__':
     print('single tree', accuracy, precision, recall)
     print(confusion_matrix)
 
-    # training - bagging
-    print('\n\n--prediction bagging dataset')
-    train_bagging = tree_grow_b(training_data, 'post', 15, 5, 41, 100)
-    test_bagging = tree_pred_b(test_data, train_bagging)
-    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-    for i in range(len(test_bagging)):
-        # check whether pred (tree) and true data are equal
-        if test_bagging[i] == 0:
-            if test_data['post'][i] == 0:
-                confusion_matrix['TN'] += 1
-            if test_data['post'][i] > 0:
-                confusion_matrix['FN'] += 1
-        if test_bagging[i] > 0:
-            if test_data['post'][i] > 0:
-                confusion_matrix['TP'] += 1
-            if test_data['post'][i] == 0:
-                confusion_matrix['FP'] += 1
+
+# training - bagging
+print('\n\n--prediction bagging dataset')
+train_bagging = tree_grow_b(training_data, 'post', 15, 5, 41, 100)
+test_bagging = tree_pred_b(test_data, train_bagging)
+confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+for i in range(len(test_bagging)):
+    # check whether pred (tree) and true data are equal
+    if test_bagging[i] == 0:
+        if test_data['post'][i] == 0:
+            confusion_matrix['TN'] += 1
+        if test_data['post'][i] > 0:
+            confusion_matrix['FN'] += 1
+    if test_bagging[i] > 0:
+        if test_data['post'][i] > 0:
+            confusion_matrix['TP'] += 1
+        if test_data['post'][i] == 0:
+            confusion_matrix['FP'] += 1
 
     accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
     precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
@@ -355,3 +356,51 @@ if __name__ == '__main__':
     recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
     print('random forest', accuracy, precision, recall)
     print(confusion_matrix)
+
+
+
+def print_tree_recursive(node, level=0, side="root", split_level=3):
+    """ Recursively print the structure of the decision tree. """
+    if node is None:
+        print("The tree is empty.")
+        return
+
+    indent = "   " * level  # Indentation for visual representation
+
+    # Check if node is a leaf
+    if node != [] and split_level > 0:
+        if node.left is None and node.right is None:
+            # Leaf node: print predicted class and number of instances
+            print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}")
+        else:
+            # Internal node: print splitting feature and threshold
+            print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}")
+
+            # Recursively print the left and right subtrees
+            print_tree_recursive(node.left, level + 1, "left", split_level - 1)
+            print_tree_recursive(node.right, level + 1, "right", split_level - 1)
+
+
+def print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=False, bagging=False, random_forest=False):
+    trees_to_process = [
+        (single_credit, "Single tree - Credit data"),
+        (single_indians, "Single tree - Indians data"),
+        (single_eclipse, "Single tree - Eclipse data"),
+        (ensamble_credit, "Ensamble credit"),
+        (bagging, "Bagging:"),
+        (random_forest, "Random forest")
+    ]
+
+    for tree, message in trees_to_process:
+        if tree:
+            if isinstance(tree, list):
+                print(message)
+                for t in tree:
+                    print_tree_recursive(t)
+            else:
+                print(message)
+                print_tree_recursive(tree)
+
+#print_tree(single_credit=single_tree, ensamble_credit=False, single_indians=indians_tree, single_eclipse=train_tree, bagging=False, random_forest=False)
+#print_tree(single_credit=single_tree, ensamble_credit=ensamble_tree, single_indians=False, single_eclipse=False, bagging=False, random_forest=False)
+print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=train_tree, bagging=False, random_forest=False)
