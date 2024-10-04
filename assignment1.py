@@ -1,9 +1,13 @@
 import numpy as np
-from sklearn.utils import resample
-from collections import Counter
 import pandas as pd
 import statistics
-from collections import defaultdict
+from joblib import Parallel, delayed
+from multiprocessing import Pool
+import multiprocessing
+
+from statsmodels.graphics.tukeyplot import results
+from tqdm import tqdm
+from multiprocessing import Pool, cpu_count
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 indians = pd.read_csv('data/indians.txt', delimiter=',', names=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'])
@@ -44,6 +48,7 @@ def best_split(x, y, minleaf):
             best_left_child_indexes = []
             best_right_child_indexes = []
             sorted_values = np.sort(np.unique(x[split]))
+            impurity_father = impurity(y)
             #check that we have enough different values for a split
             if len(sorted_values) > 1:
                 # check if there are only 2 values, do the split by selecting one of the two values
@@ -55,7 +60,9 @@ def best_split(x, y, minleaf):
                     indexes_left_child = x[split][x[split] <= avg].index.tolist()
                     indexes_right_child = list(set(x[split].index)- set(indexes_left_child))
                     # calculate impurity reduction
-                    impurity_reduction = impurity_reduction_calc(y, indexes_left_child, indexes_right_child)
+                    impurity_reduction = impurity_father - (
+                        ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) +
+                        ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
                     if impurity_reduction > best_impurity_reduction and len(indexes_left_child) > minleaf and len(
                             indexes_right_child) > minleaf:
                         best_impurity_reduction = impurity_reduction
@@ -84,20 +91,27 @@ def impurity(x):
         return 0
 
 class Node:
-    def __init__(self, instances, feature=None, threshold=None, left=[], right=[], predicted_class=None):
+    def __init__(self, instances, feature=None, threshold=None, left=[], right=[], father=None, predicted_class=None):
         self.instances = instances
         self.feature = feature
         self.threshold = threshold
         self.left = left
         self.right = right
+        self.father = father
         self.predicted_class = predicted_class
+
+class Tree:
+    def __init__(self, root = None, leaves = None):
+        self.root = root
+        self.leaves = leaves
 
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
 
     if not x.empty:
-        root = Node(x)
+        root = Node(x.index)
         nodelist = [root]
+        leaves = []
 
         # tree grow stops when we split all the nodes, the nodes that cannot be split are removed from the list
         while nodelist:
@@ -108,50 +122,70 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
             current_node_instances = current_node.instances
 
             # store node in the tree before splitting
-            labels = y.iloc[current_node_instances.index]
+            labels = y.iloc[current_node_instances]
 
             nodelist.pop(0)
 
             # avoid splitting leaf nodes with zero impurity and check that there are enough observations for a split
-            if impurity(labels) > 0 and current_node.instances.shape[0] >= nmin:
+            if impurity(labels) > 0 and len(current_node.instances) >= nmin:
 
                 # random sample nfeat number of columns (should we create the condition for the random forest?)
-                candidate_features = current_node.instances.sample(n=nfeat, axis='columns')
+                candidate_features = np.random.choice(x.columns, size=nfeat, replace=False)
 
                 # calculate best split and impurity reduction to get child nodes
-                left, right, feature, threshold = best_split(candidate_features, labels, minleaf)
+                left, right, feature, threshold = best_split(x.loc[current_node_instances, candidate_features], labels, minleaf)
 
                 # store current node info
                 if feature:
-                    current_node.left = Node(x.iloc[left])
-                    current_node.right = Node(x.iloc[right])
+                    current_node.left = Node(left, father=current_node)
+                    current_node.right = Node(right, father=current_node)
                     # update list
                     nodelist.append(current_node.left)
                     nodelist.append(current_node.right)
                     current_node.threshold = threshold
                     current_node.feature = feature
+                else:
+                    leaves.append(current_node)
                 current_node.predicted_class = statistics.mode(labels)
 
             else:
                 # return the final prediction of the leaf node
                 current_node.predicted_class = statistics.mode(labels)
-        return root
+                leaves.append(current_node)
+        return Tree(root, leaves)
     else:
         raise ValueError("x is empty")
+
 
 def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     # assignment states trees must be in list
     trees = []
+    results = []
+    random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
+
+    pool = Pool(processes=(cpu_count() - 1))
+
+    # tqdm progress bar for asynchronous task completion
+    pbar = tqdm(total=m, desc="Growing Trees", unit=" tree")
+
+    def collect_result(result):
+        """Callback to collect result and update progress bar."""
+        trees.append(result)
+        pbar.update()
+
     for i in range(m):
-        bagging_sample = x.sample(n=len(x), replace=True).reset_index(drop=True)
-        trees.append(tree_grow(bagging_sample.loc[:, bagging_sample.columns != target_feature], bagging_sample[target_feature], nmin, minleaf, nfeat))
-        print(i)
+        #trees.append(tree_grow(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat))
+        result = pool.apply_async(tree_grow, args=(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat), callback=collect_result)
+        results.append(result)
+    pool.close()
+    pool.join()
+
     return trees
 
 def tree_pred(x, tr):
     predicted_labels = []
     for index, row in x.iterrows():
-        current_node = tr
+        current_node = tr.root
         # leaf node doesn't contain a feature
         while current_node.feature:
             if row[current_node.feature] < current_node.threshold:
@@ -167,11 +201,11 @@ def tree_pred(x, tr):
 def tree_pred_b(x, tr):
     majority_votes = {}
     predicted_labels = []
-    for tree in tr:
+    for tree in tqdm(tr, desc="Processing Trees", unit="tree"):
         predicted_labels.append(tree_pred(x, tree))
 
     # Loop over the list of predicted labels (one list for each tree)
-    for tree_predictions in predicted_labels:
+    for tree_predictions in tqdm(predicted_labels, desc="Processing Predictions", unit="set"):
         # Loop over the individual predictions in a tree
         for i in range(len(tree_predictions)):
             if i not in majority_votes:
@@ -210,110 +244,114 @@ def print_tree(node, level=0, side="root"):
             else:
                 print(f"{indent}   - right [Empty]")  # Show if the right child is missing
 
+def predict_parallel_processing(x, tree):
+    print(x)
+    return Parallel(n_jobs=-1)(delayed(tree_pred)(x, tr) for tr in tree)
 
-#print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
+if __name__ == '__main__':
+    #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
 
-single_tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
-# print(single_tree)
+    single_tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
+    # print(single_tree)
 
-ensamble_tree = tree_grow_b(credit_data_with_headers, 'class', 2, 2, 5, 10)
-# print(ensamble_tree)
+    ensamble_tree = tree_grow_b(credit_data_with_headers, 'class', 2, 2, 5, 10)
+    # print(ensamble_tree)
 
-#test prediction
-print('\n\n--prediction single tree')
-print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], single_tree))
+    #test prediction
+    print('\n\n--prediction single tree')
+    print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], single_tree))
 
-#test prediction_b
-print('\n\n--prediction all trees')
-predictions = tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree)
-# print(predictions)
+    #test prediction_b
+    print('\n\n--prediction all trees')
+    predictions = tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree)
+    # print(predictions)
 
-# test indians confusion matrix
-indians_tree = tree_grow(indians.drop('i', axis=1), indians['i'], 20, 5, 8)
-indians_pred = tree_pred(indians.drop('i', axis=1), indians_tree)
-pred_true = {'00': 0, '10': 0, '01': 0, '11': 0}
-for i in range(len(indians_pred)):
-    # check whether class of original dataset is equal to predicted class
-    if indians['i'][i] == indians_pred[i]:
-        if indians_pred[i] == 1:
-            pred_true['11'] += 1
+    # test indians confusion matrix
+    indians_tree = tree_grow(indians.drop('i', axis=1), indians['i'], 20, 5, 8)
+    indians_pred = tree_pred(indians.drop('i', axis=1), indians_tree)
+    pred_true = {'00': 0, '10': 0, '01': 0, '11': 0}
+    for i in range(len(indians_pred)):
+        # check whether class of original dataset is equal to predicted class
+        if indians['i'][i] == indians_pred[i]:
+            if indians_pred[i] == 1:
+                pred_true['11'] += 1
+            else:
+                pred_true['00'] += 1
         else:
-            pred_true['00'] += 1
-    else:
-        if indians_pred[i] == 1:
-            pred_true['10'] += 1
-        else:
-            pred_true['01'] += 1
-print(pred_true)
+            if indians_pred[i] == 1:
+                pred_true['10'] += 1
+            else:
+                pred_true['01'] += 1
+    print(pred_true)
 
-# training - single tree
-print('\n\n--prediction single tree dataset')
-train_tree = tree_grow(training_features, training_data['post'], 15, 5, 41)
-test_tree = tree_pred(test_features, train_tree)
-confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-for i in range(len(test_tree)):
-    # check whether pred (tree) and true data are equal
-    if test_tree[i] == 0:
-        if test_data['post'][i] == 0:
-            confusion_matrix['TN'] += 1
-        if test_data['post'][i] > 0:
-            confusion_matrix['FN'] += 1
-    if test_tree[i] > 0:
-        if test_data['post'][i] > 0:
-            confusion_matrix['TP'] += 1
-        if test_data['post'][i] == 0:
-            confusion_matrix['FP'] += 1
+    # training - single tree
+    print('\n\n--prediction single tree dataset')
+    train_tree = tree_grow(training_features, training_data['post'], 15, 5, 41)
+    test_tree = tree_pred(test_features, train_tree)
+    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+    for i in range(len(test_tree)):
+        # check whether pred (tree) and true data are equal
+        if test_tree[i] == 0:
+            if test_data['post'][i] == 0:
+                confusion_matrix['TN'] += 1
+            if test_data['post'][i] > 0:
+                confusion_matrix['FN'] += 1
+        if test_tree[i] > 0:
+            if test_data['post'][i] > 0:
+                confusion_matrix['TP'] += 1
+            if test_data['post'][i] == 0:
+                confusion_matrix['FP'] += 1
 
-accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
-precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
-recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
-print('single tree', accuracy, precision, recall)
-print(confusion_matrix)
+    accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
+    precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
+    recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
+    print('single tree', accuracy, precision, recall)
+    print(confusion_matrix)
 
-# training - bagging
-print('\n\n--prediction bagging dataset')
-train_bagging = tree_grow_b(training_data, 'post', 15, 5, 41, 100)
-test_bagging = tree_pred_b(test_data, train_bagging)
-confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-for i in range(len(test_bagging)):
-    # check whether pred (tree) and true data are equal
-    if test_bagging[i] == 0:
-        if test_data['post'][i] == 0:
-            confusion_matrix['TN'] += 1
-        if test_data['post'][i] > 0:
-            confusion_matrix['FN'] += 1
-    if test_bagging[i] > 0:
-        if test_data['post'][i] > 0:
-            confusion_matrix['TP'] += 1
-        if test_data['post'][i] == 0:
-            confusion_matrix['FP'] += 1
+    # training - bagging
+    print('\n\n--prediction bagging dataset')
+    train_bagging = tree_grow_b(training_data, 'post', 15, 5, 41, 100)
+    test_bagging = tree_pred_b(test_data, train_bagging)
+    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+    for i in range(len(test_bagging)):
+        # check whether pred (tree) and true data are equal
+        if test_bagging[i] == 0:
+            if test_data['post'][i] == 0:
+                confusion_matrix['TN'] += 1
+            if test_data['post'][i] > 0:
+                confusion_matrix['FN'] += 1
+        if test_bagging[i] > 0:
+            if test_data['post'][i] > 0:
+                confusion_matrix['TP'] += 1
+            if test_data['post'][i] == 0:
+                confusion_matrix['FP'] += 1
 
-accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
-precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
-recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
-print('bagging', accuracy, precision, recall)
-print(confusion_matrix)
+    accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
+    precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
+    recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
+    print('bagging', accuracy, precision, recall)
+    print(confusion_matrix)
 
-# training - random forest
-print('\n\n--prediction bagging dataset')
-train_random = tree_grow_b(training_data, 'post', 15, 5, 6, 100)
-test_random = tree_pred_b(test_data, train_random)
-confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-for i in range(len(test_random)):
-    # check whether pred (tree) and true data are equal
-    if test_random[i] == 0:
-        if test_data['post'][i] == 0:
-            confusion_matrix['TN'] += 1
-        if test_data['post'][i] > 0:
-            confusion_matrix['FN'] += 1
-    if test_random[i] > 0:
-        if test_data['post'][i] > 0:
-            confusion_matrix['TP'] += 1
-        if test_data['post'][i] == 0:
-            confusion_matrix['FP'] += 1
+    # training - random forest
+    print('\n\n--prediction random forest dataset')
+    train_random = tree_grow_b(training_data, 'post', 15, 5, 6, 100)
+    test_random = tree_pred_b(test_data, train_random)
+    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+    for i in range(len(test_random)):
+        # check whether pred (tree) and true data are equal
+        if test_random[i] == 0:
+            if test_data['post'][i] == 0:
+                confusion_matrix['TN'] += 1
+            if test_data['post'][i] > 0:
+                confusion_matrix['FN'] += 1
+        if test_random[i] > 0:
+            if test_data['post'][i] > 0:
+                confusion_matrix['TP'] += 1
+            if test_data['post'][i] == 0:
+                confusion_matrix['FP'] += 1
 
-accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
-precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
-recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
-print('random forest', accuracy, precision, recall)
-print(confusion_matrix)
+    accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
+    precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
+    recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
+    print('random forest', accuracy, precision, recall)
+    print(confusion_matrix)
