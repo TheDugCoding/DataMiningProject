@@ -234,10 +234,6 @@ def print_tree(node, level=0, side="root"):
             else:
                 print(f"{indent}   - right [Empty]")  # Show if the right child is missing
 
-def predict_parallel_processing(x, tree):
-    print(x)
-    return Parallel(n_jobs=-1)(delayed(tree_pred)(x, tr) for tr in tree)
-
 if __name__ == '__main__':
     #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
 
