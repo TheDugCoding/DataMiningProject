@@ -180,3 +180,48 @@ def tree_pred(x, tr):
 #Tree = tree_grow_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5, 6)
 #rint(Tree)
 print_tree(tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5))
+
+def print_tree_recursive(node, level=0, side="root", split_level=3, graph=None, node_id=0):
+    """ Recursively print the structure of the decision tree. """
+    if node is None:
+        print("The tree is empty.")
+        return
+
+    indent = "   " * level  # Indentation for visual representation
+
+    # Initialize graph if it's not passed
+    if graph is None:
+        graph = Digraph(format='png')  # Create a new graph
+        graph.attr('node', shape='box')
+
+    # Generate a unique ID for each node
+    current_node_id = f"{node_id}_{side}"
+    node_id += 1
+
+    # Check if node is a leaf
+    if node != [] and split_level > 0:
+        if node.left is None and node.right is None:
+            # Leaf node: print predicted class and number of instances
+            print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}")
+            # Add leaf node to graph
+            graph.node(current_node_id, f"{side}\nLeaf\nClass: {node.predicted_class}\nInstances: {len(node.instances)}")
+        else:
+            # Internal node: print splitting feature and threshold
+            print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}, Predicted_class: {node.predicted_class}")
+            # Add leaf node to graph
+            graph.node(current_node_id, f"{side}\nLeaf\nClass: {node.predicted_class}\nInstances: {len(node.instances)}")
+
+            # Recursively print the left and right subtrees
+            left_node_id = f"{current_node_id}_left"
+            node_id = print_tree_recursive(node.left, level + 1, "left", split_level - 1, graph, node_id)
+            graph.edge(current_node_id, left_node_id)
+
+            right_node_id = f"{current_node_id}_right"
+            node_id = print_tree_recursive(node.right, level + 1, "right", split_level - 1, graph, node_id)
+            graph.edge(current_node_id, right_node_id)
+    
+    # If at root level, save and render the graph
+    if level == 0:
+        graph.render('tree_visualization', view=True)  # Save as PNG and view
+
+    return node_id
