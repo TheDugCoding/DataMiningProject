@@ -1,0 +1,6 @@
+numpy==2.0
+pandas==2.2.3
+statistics==1.0.3.5
+joblib==1.4.2
+statsmodels==0.14.4
+tqdm==4.66.5
