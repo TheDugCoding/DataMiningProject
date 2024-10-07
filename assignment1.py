@@ -6,6 +6,7 @@ from multiprocessing import Pool
 import multiprocessing
 
 from statsmodels.graphics.tukeyplot import results
+from statsmodels.stats.contingency_tables import mcnemar
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
 
@@ -391,3 +392,37 @@ def print_tree(single_credit=False, ensamble_credit=False, single_indians=False,
 #print_tree(single_credit=single_tree, ensamble_credit=False, single_indians=indians_tree, single_eclipse=train_tree, bagging=False, random_forest=False)
 #print_tree(single_credit=single_tree, ensamble_credit=ensamble_tree, single_indians=False, single_eclipse=False, bagging=False, random_forest=False)
 #print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=train_tree, bagging=False, random_forest=False)
+
+def mcnemar_test():
+    # We need to compare the predictions to build the contingency table
+    correct_bagging = (test_bagging == test_data['post'])
+    correct_rf = (test_random == test_data['post'])
+
+    # Contingency table
+    table = np.zeros((2, 2))
+
+    # Fill the table based on correct/wrong classifications
+    table[0, 0] = np.sum(correct_bagging & correct_rf)   # Both correct (a)
+    table[0, 1] = np.sum(~correct_bagging & correct_rf)  # RF correct, Bagging wrong (b)
+    table[1, 0] = np.sum(correct_bagging & ~correct_rf)  # Bagging correct, RF wrong (c)
+    table[1, 1] = np.sum(~correct_bagging & ~correct_rf) # Both wrong (d)
+
+    print("Contingency Table:")
+    print(table)
+
+    # Perform McNemar's test
+    result = mcnemar(table, exact=True)  # Use exact=True for small samples
+
+    print(f"McNemar's test p-value: {result.pvalue}")
+
+    # Compute confidence level
+    confidence_level = (1 - result.pvalue) * 100
+    print(f"Confidence Level: {confidence_level:.2f}%")
+
+    # Interpretation
+    if result.pvalue < 0.05:
+        print("There is a significant difference between the two models.")
+    else:
+        print("There is no significant difference between the two models.")
+
+mcnemar_test()
