@@ -1,11 +1,7 @@
 import numpy as np
 import pandas as pd
 import statistics
-from joblib import Parallel, delayed
-from multiprocessing import Pool
-import multiprocessing
 
-from statsmodels.graphics.tukeyplot import results
 from statsmodels.stats.contingency_tables import mcnemar
 from tqdm import tqdm
 from multiprocessing import Pool, cpu_count
@@ -30,12 +26,14 @@ test_data.loc[test_data['post'] > 0, 'post'] = 1
 training_features = training_data.drop('post', axis=1)
 test_features = test_data.drop('post', axis=1)
 
-def impurity_reduction_calc(y, indexes_left_child, indexes_right_child):
-    return impurity(y) - (
-        ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) +
-        ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
-
 def best_split(x, y, minleaf):
+    """
+    :param x: rows of the dataset used to select the best split
+    :param y: rows of the target variable
+    :param minleaf: minimum number of observations required for a leaf node
+    :return: the functions returns the indexes of the elements that belong to the left and right children nodes
+    (if they are not leaves node), the feature used for the split, and the value used for splitting the node
+    """
     best_impurity_reduction = float('-inf')
     best_value = 0
     best_left_child_indexes = []
@@ -45,11 +43,11 @@ def best_split(x, y, minleaf):
 
     if len(x) == len(y):
         for split in x.columns:
+            # check how many unique values there are
             sorted_values = np.sort(np.unique(x[split]))
 
             #check that we have enough different values for a split
             if len(sorted_values) > 1:
-                # check if there are only 2 values, do the split by selecting one of the two values
                 for value_index in range(len(sorted_values) -1):
                     # follows the x < c instructions, the variable avg is the average of two consecutive numbers
                     avg = (sorted_values[value_index] + sorted_values[value_index + 1]) / 2
@@ -61,6 +59,7 @@ def best_split(x, y, minleaf):
                         impurity_reduction = impurity_father - (
                                 ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) +
                                 ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
+                        # if the impurity reduction obtained with this values is the best one yet, save it
                         if impurity_reduction > best_impurity_reduction:
                             best_impurity_reduction = impurity_reduction
                             best_split = split
@@ -72,6 +71,10 @@ def best_split(x, y, minleaf):
         raise ValueError("Arrays must have the same size")
 
 def impurity(x):
+    """
+    :param x: A series of values, the values must be 0 or 1
+    :return: the functions returns the Gini impurity
+    """
     if len(x) > 0:
         sum = 0
         for i in x:
@@ -98,7 +101,14 @@ class Tree:
 
 
 def tree_grow(x, y, nmin, minleaf, nfeat):
-
+    """
+    :param x: rows of the dataset used for creating the tree
+    :param y: rows of the target features used for creating the tree
+    :param nmin: the number of observations that a node must contain at least, for it to be allowed to be split
+    :param minleaf: minimum number of observations required for a leaf node
+    :param nfeat: number of features that should be considered for each split
+    :return: the function returns a binary tree
+    """
     if not x.empty:
         root = Node(x.index)
         nodelist = [root]
@@ -120,7 +130,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
             # avoid splitting leaf nodes with zero impurity and check that there are enough observations for a split
             if impurity(labels) > 0 and len(current_node.instances) >= nmin:
 
-                # random sample nfeat number of columns (should we create the condition for the random forest?)
+                # random sample nfeat number of columns
                 candidate_features = np.random.choice(x.columns, size=nfeat, replace=False)
 
                 # calculate best split and impurity reduction to get child nodes
@@ -149,7 +159,15 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
 
 def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
-    # assignment states trees must be in list
+    """
+    :param x: rows of the dataset used for creating the tree
+    :param target_feature: name of the feature used for classification
+    :param nmin: the number of observations that a node must contain at least, for it to be allowed to be split.
+    :param minleaf: minimum number of observations required for a leaf node
+    :param nfeat: number of features used to select the best split
+    :param m: number of trees to be created
+    :return: the function return a list of trees
+    """
     trees = []
     results = []
     random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
@@ -164,6 +182,7 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
         trees.append(result)
         pbar.update()
 
+    # using parallelization to speed up the process, in case parallelization doesn't work use the commented instruction instead
     for i in range(m):
         #trees.append(tree_grow(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat))
         result = pool.apply_async(tree_grow, args=(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat), callback=collect_result)
@@ -174,22 +193,33 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     return trees
 
 def tree_pred(x, tr):
+    """
+    :param x: rows of the dataset used to make a prediction
+    :param tr: the tree that we are using for the prediction
+    :return: a single dimensional array containing the prediction of the tree
+    """
     predicted_labels = []
     for index, row in x.iterrows():
         current_node = tr.root
-        # leaf node doesn't contain a feature
+        # a leaf node doesn't contain a feature
         while current_node.feature:
+            # left branch
             if row[current_node.feature] < current_node.threshold:
                 current_node = current_node.left
-                #print('left')
             else:
+                # right branch
                 current_node = current_node.right
-                #print('right')
         predicted_labels.append(current_node.predicted_class)
 
     return predicted_labels
 
 def tree_pred_b(x, tr):
+    """
+    :param x: rows of the dataset used to make a prediction
+    :param tr: a list of trees that we are using for predictions
+    :return: a single dimensional array containing the prediction of the tree, the final
+    prediction is made by selecting the class that received the most votes
+    """
     majority_votes = {}
     predicted_labels = []
     for tree in tqdm(tr, desc="Processing Trees", unit="tree"):
