@@ -187,8 +187,8 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     # using parallelization to speed up the process, in case parallelization doesn't work use the commented instruction instead
     for i in range(m):
         #trees.append(tree_grow(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat))
-        result = pool.apply_async(tree_grow, args=(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat), callback=collect_result)
-        results.append(result)
+        pool.apply_async(tree_grow, args=(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat), callback=collect_result)
+        #results.append(result)
     pool.close()
     pool.join()
 
@@ -215,15 +215,17 @@ def tree_pred(x, tr):
 
     return predicted_labels
 
+
 def tree_pred_b(x, tr):
     """
     :param x: rows of the dataset used to make a prediction
     :param tr: a list of trees that we are using for predictions
-    :return: a single dimensional array containing the prediction of the tree, the final
-    prediction is made by selecting the class that received the most votes
+    :return: a list containing the final predictions, where each prediction is made
+    by selecting the class that received the most votes.
     """
     majority_votes = {}
     predicted_labels = []
+
     for tree in tqdm(tr, desc="Processing Trees Predictions", unit="tree"):
         predicted_labels.append(tree_pred(x, tree))
 
@@ -236,8 +238,10 @@ def tree_pred_b(x, tr):
             # Add 1 for '1', subtract 1 for '0'
             majority_votes[i] += 1 if tree_predictions[i] == 1 else -1
 
-        # Return 1 if the sum is positive (more 1s), else 0 (more 0s or only 0)
-    return {index: 1 if vote > 0 else 0 for index, vote in majority_votes.items()}
+    # Convert the majority_votes dictionary to a list of predictions
+    final_predictions = [1 if majority_votes[i] > 0 else 0 for i in range(len(majority_votes))]
+
+    return final_predictions
 
 def print_tree(node, level=0, side="root"):
     """ Recursively print the structure of the decision tree. """
@@ -266,6 +270,72 @@ def print_tree(node, level=0, side="root"):
                 print_tree(node.right, level + 1, "right")
             else:
                 print(f"{indent}   - right [Empty]")  # Show if the right child is missing
+
+def print_tree_recursive(node, level=0, side="root", split_level=3):
+    """ Recursively print the structure of the decision tree. """
+    if node is None:
+        print("The tree is empty.")
+        return
+
+    indent = "   " * level  # Indentation for visual representation
+
+    # Check if node is a leaf
+    if node != [] and split_level > 0:
+        if node.left is None and node.right is None:
+            # Leaf node: print predicted class and number of instances
+            print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}")
+        else:
+            # Internal node: print splitting feature and threshold
+            print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}")
+
+            # Recursively print the left and right subtrees
+            print_tree_recursive(node.left, level + 1, "left", split_level - 1)
+            print_tree_recursive(node.right, level + 1, "right", split_level - 1)
+
+
+def print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=False, bagging=False, random_forest=False):
+    trees_to_process = [
+        (single_credit, "Single tree - Credit data"),
+        (single_indians, "Single tree - Indians data"),
+        (single_eclipse, "Single tree - Eclipse data"),
+        (ensamble_credit, "Ensamble credit"),
+        (bagging, "Bagging:"),
+        (random_forest, "Random forest")
+    ]
+
+    for tree, message in trees_to_process:
+        if tree:
+            if isinstance(tree, list):
+                print(message)
+                for t in tree:
+                    print_tree_recursive(t)
+            else:
+                print(message)
+                print_tree_recursive(tree)
+
+#print_tree(single_credit=single_tree, ensamble_credit=False, single_indians=indians_tree, single_eclipse=train_tree, bagging=False, random_forest=False)
+#print_tree(single_credit=single_tree, ensamble_credit=ensamble_tree, single_indians=False, single_eclipse=False, bagging=False, random_forest=False)
+#print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=train_tree, bagging=False, random_forest=False)
+
+def mcnemar_test(y_true, y_pred1, y_pred2):
+    # We need to compare the predictions to build the contingency table
+    #correct_bagging = (test_bagging == test_data['post'])
+    correct_rf = (test_random == test_data['post'])
+
+    correct1 = (y_pred1 == y_true)
+    correct2 = (y_pred2 == y_true)
+
+    # Contigency table
+    table = np.zeros((2, 2))
+    table[0, 0] = np.sum(correct1 & correct2)   # Both correct
+    table[0, 1] = np.sum(~correct1 & correct2)  # Model 2 correct, Model 1 wrong
+    table[1, 0] = np.sum(correct1 & ~correct2)  # Model 1 correct, Model 2 wrong
+    table[1, 1] = np.sum(~correct1 & ~correct2) # Both wrong
+
+    print(table)
+
+    result = mcnemar(table, exact=True)
+    return result.pvalue
 
 if __name__ == '__main__':
     #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
@@ -377,99 +447,36 @@ if __name__ == '__main__':
     print('random forest', accuracy, precision, recall)
     print(confusion_matrix)
 
+    # Pairwise comparisons (without correction)
+    p_value_single_tree_bagging = mcnemar_test(test_data['post'], test_tree, test_bagging)
+    p_value_bagging_rf = mcnemar_test(test_data['post'], test_bagging, test_random)
+    p_value_rf_single_tree = mcnemar_test(test_data['post'], test_random, test_tree)
 
+    # Bonferroni correction: 3 comparisons, so we divide the alpha level by 3
+    alpha = 0.05
+    bonferroni_alpha = 0.05 / 3
+    significance_levels = [alpha, bonferroni_alpha]
 
-def print_tree_recursive(node, level=0, side="root", split_level=3):
-    """ Recursively print the structure of the decision tree. """
-    if node is None:
-        print("The tree is empty.")
-        return
+    for alpha_value in significance_levels:
+        print(f"Significance level:  alpha = {alpha:.4f}\n")
 
-    indent = "   " * level  # Indentation for visual representation
-
-    # Check if node is a leaf
-    if node != [] and split_level > 0:
-        if node.left is None and node.right is None:
-            # Leaf node: print predicted class and number of instances
-            print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}")
+        print(f"Single Tree vs Bagging p-value: {p_value_single_tree_bagging:.4f}")
+        if p_value_single_tree_bagging < alpha_value:
+            print("Significant difference.")
         else:
-            # Internal node: print splitting feature and threshold
-            print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}")
+            print("No significant difference.")
 
-            # Recursively print the left and right subtrees
-            print_tree_recursive(node.left, level + 1, "left", split_level - 1)
-            print_tree_recursive(node.right, level + 1, "right", split_level - 1)
+        print(f"Bagging vs Random Forest p-value: {p_value_bagging_rf:.4f}")
+        if p_value_bagging_rf < alpha_value:
+            print("Significant difference.")
+        else:
+            print("No significant difference.")
+
+        print(f"Random Forest vs Single Tree p-value: {p_value_rf_single_tree:.4f}")
+        if p_value_rf_single_tree < alpha_value:
+            print("Significant difference.")
+        else:
+            print("No significant difference.")
 
 
-def print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=False, bagging=False, random_forest=False):
-    trees_to_process = [
-        (single_credit, "Single tree - Credit data"),
-        (single_indians, "Single tree - Indians data"),
-        (single_eclipse, "Single tree - Eclipse data"),
-        (ensamble_credit, "Ensamble credit"),
-        (bagging, "Bagging:"),
-        (random_forest, "Random forest")
-    ]
 
-    for tree, message in trees_to_process:
-        if tree:
-            if isinstance(tree, list):
-                print(message)
-                for t in tree:
-                    print_tree_recursive(t)
-            else:
-                print(message)
-                print_tree_recursive(tree)
-
-#print_tree(single_credit=single_tree, ensamble_credit=False, single_indians=indians_tree, single_eclipse=train_tree, bagging=False, random_forest=False)
-#print_tree(single_credit=single_tree, ensamble_credit=ensamble_tree, single_indians=False, single_eclipse=False, bagging=False, random_forest=False)
-#print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=train_tree, bagging=False, random_forest=False)
-
-def mcnemar_test(y_true, y_pred1, y_pred2):
-    # We need to compare the predictions to build the contingency table
-    #correct_bagging = (test_bagging == test_data['post'])
-    correct_rf = (test_random == test_data['post'])
-
-    correct1 = (y_pred1 == y_true)
-    correct2 = (y_pred2 == y_true)
-
-    # Contigency table
-    table = np.zeros((2, 2))
-    table[0, 0] = np.sum(correct1 & correct2)   # Both correct
-    table[0, 1] = np.sum(~correct1 & correct2)  # Model 2 correct, Model 1 wrong
-    table[1, 0] = np.sum(correct1 & ~correct2)  # Model 1 correct, Model 2 wrong
-    table[1, 1] = np.sum(~correct1 & ~correct2) # Both wrong
-
-    result = mcnemar(table, exact=True)
-    return result.pvalue
-
-# Pairwise comparisons (without correction)
-p_value_single_tree_bagging = mcnemar_test(test_data['post'], test_tree, test_bagging)
-p_value_bagging_rf = mcnemar_test(test_data['post'], test_bagging, test_random)
-p_value_rf_single_tree = mcnemar_test(test_data['post'], test_random, test_tree)
-
-# Bonferroni correction: 3 comparisons, so we divide the alpha level by 3
-alpha = 0.05
-bonferroni_alpha = 0.05 / 3
-significance_levels = [alpha, bonferroni_alpha]
-
-for alpha in significance_levels:
-    print(f"Significance level:  alpha = {alpha:.4f}\n")
-
-    print(f"Single Tree vs Bagging p-value: {p_value_single_tree_bagging:.4f}")
-    if p_value_single_tree_bagging < alpha:
-        print("Significant difference after Bonferroni correction.")
-    else:
-        print("No significant difference after Bonferroni correction.")
-
-    print(f"Bagging vs Random Forest p-value: {p_value_bagging_rf:.4f}")
-    if p_value_bagging_rf < alpha:
-        print("Significant difference after Bonferroni correction.")
-    else:
-        print("No significant difference after Bonferroni correction.")
-
-    print(f"Random Forest vs Single Tree p-value: {p_value_rf_single_tree:.4f}")
-    if p_value_rf_single_tree < alpha:
-        print("Significant difference after Bonferroni correction.")
-    else:
-        print("No significant difference after Bonferroni correction.")
