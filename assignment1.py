@@ -425,36 +425,51 @@ def print_tree(single_credit=False, ensamble_credit=False, single_indians=False,
 #print_tree(single_credit=single_tree, ensamble_credit=ensamble_tree, single_indians=False, single_eclipse=False, bagging=False, random_forest=False)
 #print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=train_tree, bagging=False, random_forest=False)
 
-def mcnemar_test():
+def mcnemar_test(y_true, y_pred1, y_pred2):
     # We need to compare the predictions to build the contingency table
-    correct_bagging = (test_bagging == test_data['post'])
+    #correct_bagging = (test_bagging == test_data['post'])
     correct_rf = (test_random == test_data['post'])
 
-    # Contingency table
+    correct1 = (y_pred1 == y_true)
+    correct2 = (y_pred2 == y_true)
+
+    # Contigency table
     table = np.zeros((2, 2))
+    table[0, 0] = np.sum(correct1 & correct2)   # Both correct
+    table[0, 1] = np.sum(~correct1 & correct2)  # Model 2 correct, Model 1 wrong
+    table[1, 0] = np.sum(correct1 & ~correct2)  # Model 1 correct, Model 2 wrong
+    table[1, 1] = np.sum(~correct1 & ~correct2) # Both wrong
 
-    # Fill the table based on correct/wrong classifications
-    table[0, 0] = np.sum(correct_bagging & correct_rf)   # Both correct (a)
-    table[0, 1] = np.sum(~correct_bagging & correct_rf)  # RF correct, Bagging wrong (b)
-    table[1, 0] = np.sum(correct_bagging & ~correct_rf)  # Bagging correct, RF wrong (c)
-    table[1, 1] = np.sum(~correct_bagging & ~correct_rf) # Both wrong (d)
+    result = mcnemar(table, exact=True)
+    return result.pvalue
 
-    print("Contingency Table:")
-    print(table)
+# Pairwise comparisons (without correction)
+p_value_single_tree_bagging = mcnemar_test(test_data['post'], test_tree, test_bagging)
+p_value_bagging_rf = mcnemar_test(test_data['post'], test_bagging, test_random)
+p_value_rf_single_tree = mcnemar_test(test_data['post'], test_random, test_tree)
 
-    # Perform McNemar's test
-    result = mcnemar(table, exact=True)  # Use exact=True for small samples
+# Bonferroni correction: 3 comparisons, so we divide the alpha level by 3
+alpha = 0.05
+bonferroni_alpha = 0.05 / 3
+significance_levels = [alpha, bonferroni_alpha]
 
-    print(f"McNemar's test p-value: {result.pvalue}")
+for alpha in significance_levels:
+    print(f"Significance level:  alpha = {alpha:.4f}\n")
 
-    # Compute confidence level
-    confidence_level = (1 - result.pvalue) * 100
-    print(f"Confidence Level: {confidence_level:.2f}%")
-
-    # Interpretation
-    if result.pvalue < 0.05:
-        print("There is a significant difference between the two models.")
+    print(f"Single Tree vs Bagging p-value: {p_value_single_tree_bagging:.4f}")
+    if p_value_single_tree_bagging < alpha:
+        print("Significant difference after Bonferroni correction.")
     else:
-        print("There is no significant difference between the two models.")
+        print("No significant difference after Bonferroni correction.")
 
-    #mcnemar_test()
+    print(f"Bagging vs Random Forest p-value: {p_value_bagging_rf:.4f}")
+    if p_value_bagging_rf < alpha:
+        print("Significant difference after Bonferroni correction.")
+    else:
+        print("No significant difference after Bonferroni correction.")
+
+    print(f"Random Forest vs Single Tree p-value: {p_value_rf_single_tree:.4f}")
+    if p_value_rf_single_tree < alpha:
+        print("Significant difference after Bonferroni correction.")
+    else:
+        print("No significant difference after Bonferroni correction.")
