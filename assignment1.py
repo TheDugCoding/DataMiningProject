@@ -40,11 +40,13 @@ def best_split(x, y, minleaf):
     best_right_child_indexes = []
     best_split = ''
     impurity_father = impurity(y)
+    elements_in_y = len(y)
 
-    if len(x) == len(y):
+    if len(x) == elements_in_y:
         for split in x.columns:
             # check how many unique values there are
             sorted_values = np.sort(np.unique(x[split]))
+            split_values = x[split]
 
             #check that we have enough different values for a split
             if len(sorted_values) > 1:
@@ -52,13 +54,13 @@ def best_split(x, y, minleaf):
                     # follows the x < c instructions, the variable avg is the average of two consecutive numbers
                     avg = (sorted_values[value_index] + sorted_values[value_index + 1]) / 2
                     # select all the indexes where x < c (left child), then select indexes for the right child
-                    indexes_left_child = x.index[x[split] <= avg]
-                    indexes_right_child = x.index[x[split] > avg]
+                    indexes_left_child = split_values[split_values <= avg].index
+                    indexes_right_child = split_values[split_values > avg].index
                     if len(indexes_left_child) > minleaf and len(indexes_right_child) > minleaf:
                         # calculate impurity reduction
                         impurity_reduction = impurity_father - (
-                                ((len(y[indexes_left_child]) / len(y)) * impurity(y[indexes_left_child])) +
-                                ((len(y[indexes_right_child]) / len(y)) * impurity(y[indexes_right_child])))
+                                ((len(y[indexes_left_child]) / elements_in_y) * impurity(y[indexes_left_child])) +
+                                ((len(y[indexes_right_child]) / elements_in_y) * impurity(y[indexes_right_child])))
                         # if the impurity reduction obtained with this values is the best one yet, save it
                         if impurity_reduction > best_impurity_reduction:
                             best_impurity_reduction = impurity_reduction
@@ -222,7 +224,7 @@ def tree_pred_b(x, tr):
     """
     majority_votes = {}
     predicted_labels = []
-    for tree in tqdm(tr, desc="Processing Trees", unit="tree"):
+    for tree in tqdm(tr, desc="Processing Trees Predictions", unit="tree"):
         predicted_labels.append(tree_pred(x, tree))
 
     # Loop over the list of predicted labels (one list for each tree)
@@ -455,4 +457,4 @@ def mcnemar_test():
     else:
         print("There is no significant difference between the two models.")
 
-    mcnemar_test()
+    #mcnemar_test()
