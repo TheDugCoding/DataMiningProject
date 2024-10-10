@@ -20,8 +20,8 @@ for feature in features_data:
     for col in eclipse_2.columns: 
         if col.startswith(feature):
             keep_col_list.append(col)
-training_data = eclipse_2[keep_col_list]
-test_data = eclipse_3[keep_col_list]
+training_data = eclipse_2[keep_col_list].astype('float64')
+test_data = eclipse_3[keep_col_list].astype('float64')
 training_data.loc[training_data['post'] > 0, 'post'] = 1
 test_data.loc[test_data['post'] > 0, 'post'] = 1
 training_features = training_data.drop('post', axis=1)
@@ -42,12 +42,13 @@ def best_split(x, y, minleaf):
     best_split = None
     impurity_father = impurity(y)
     elements_in_y = len(y)
+    # y = np.array(y)
 
     if len(x) == elements_in_y:
         for split in x.columns:
             # check how many unique values there are
             split_values = x[split]
-            sorted_values = np.sort(np.unique(split_values))
+            sorted_values = np.unique(split_values)
 
 
             #check that we have enough different values for a split
@@ -56,8 +57,9 @@ def best_split(x, y, minleaf):
                     # follows the x < c instructions, the variable avg is the average of two consecutive numbers
                     avg = (sorted_values[value_index] + sorted_values[value_index + 1]) / 2
                     # select all the indexes where x < c (left child), then select indexes for the right child
-                    indexes_left_child = split_values[split_values <= avg].index
-                    indexes_right_child = split_values[split_values > avg].index
+                    mask = split_values <= avg
+                    indexes_left_child = split_values[mask].index
+                    indexes_right_child = split_values[~mask].index
                     if len(indexes_left_child) > minleaf and len(indexes_right_child) > minleaf:
                         # calculate impurity reduction
                         impurity_reduction = impurity_father - (
@@ -80,10 +82,7 @@ def impurity(x):
     :return: the functions returns the Gini impurity
     """
     if len(x) > 0:
-        sum = 0
-        for i in x:
-            sum += i
-        prob_0 = sum/len(x)
+        prob_0 = statistics.fmean(x)
         prob_1 = 1-prob_0
         return prob_0 * prob_1
     else:
@@ -139,7 +138,7 @@ def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
                 candidate_features = np.random.choice(x.columns, size=nfeat, replace=False)
 
                 # calculate best split and impurity reduction to get child nodes
-                left, right, feature, threshold = best_split(make_x(x, current_node_instances, candidate_features), labels, minleaf)
+                left, right, feature, threshold = best_split(x.loc[current_node_instances, candidate_features], labels, minleaf)
 
                 # store current node info
                 if feature:
@@ -178,18 +177,26 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     results = []
     random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
 
-    with ProcessPoolExecutor() as executor:
-        futures = []
-        # using parallelization to speed up the process, in case parallelization doesn't work use the commented instruction instead
-        for i in range(m):
-            future = executor.submit(tree_grow, x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat)
-            futures.append(future)
+    if False:
+        for i in tqdm(range(m)):
+            tree = tree_grow(     x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(
+                                         drop=True),
+                                     x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin,
+                                     minleaf, nfeat)
+            trees.append(tree)
+    else:
+        with ProcessPoolExecutor() as executor:
+            futures = []
+            # using parallelization to speed up the process, in case parallelization doesn't work use the commented instruction instead
+            for i in range(m):
+                future = executor.submit(tree_grow, x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat)
+                futures.append(future)
 
-        for future in tqdm(as_completed(futures), total=len(futures)):
-            trees.append(future.result())
-            # trees.append(tree_grow(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat))
-            #pool.apply_async(tree_grow, args=(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat), callback=collect_result)
-            #results.append(result)
+            for future in tqdm(as_completed(futures), total=len(futures)):
+                trees.append(future.result())
+                # trees.append(tree_grow(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat))
+                #pool.apply_async(tree_grow, args=(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat), callback=collect_result)
+                #results.append(result)
 
     return trees
 
@@ -468,7 +475,7 @@ if __name__ == '__main__':
 
         print(f"Single Tree vs Random Forest: p-value = {mcnemar_single_tree_rf.pvalue:.6f}, chi-square = {mcnemar_single_tree_rf.statistic}")
         if mcnemar_single_tree_rf.pvalue < alpha_value:
-            print(f"Significant difference in accuracy between the models.\nReject the Null Hypothesis: it is very unlikely ({mcnemar_rf_single_tree.pvalue}<{alpha_value:.4f}) to be true\n")
+            print(f"Significant difference in accuracy between the models.\nReject the Null Hypothesis: it is very unlikely ({mcnemar_single_tree_rf.pvalue}<{alpha_value:.4f}) to be true\n")
         else:
             print("No significant difference in accuracy between the models.\nFail to reject the Null Hypothesis: insufficient evidence to conclude that the null hypothesis is false!\n")
 
