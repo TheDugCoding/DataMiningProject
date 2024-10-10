@@ -334,8 +334,8 @@ def mcnemar_test(y_true, y_pred1, y_pred2):
 
     print(table)
 
-    result = mcnemar(table, exact=True)
-    return result.pvalue
+    result = mcnemar(table, exact=True) # exact must be true as the 'b' value in the contigency table of baggins vs random is <= 25 i.e. not possible to use asymptotic test.
+    return result
 
 if __name__ == '__main__':
     #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
@@ -448,35 +448,38 @@ if __name__ == '__main__':
     print(confusion_matrix)
 
     # Pairwise comparisons (without correction)
-    p_value_single_tree_bagging = mcnemar_test(test_data['post'], test_tree, test_bagging)
-    p_value_bagging_rf = mcnemar_test(test_data['post'], test_bagging, test_random)
-    p_value_rf_single_tree = mcnemar_test(test_data['post'], test_random, test_tree)
+    mcnemar_single_tree_bagging = mcnemar_test(test_data['post'], test_tree, test_bagging)
+    mcnemar_single_tree_rf = mcnemar_test(test_data['post'], test_tree, test_random)
+    mcnemar_bagging_rf = mcnemar_test(test_data['post'], test_bagging, test_random)
+
 
     # Bonferroni correction: 3 comparisons, so we divide the alpha level by 3
     alpha = 0.05
-    bonferroni_alpha = 0.05 / 3
+    bonferroni_alpha = alpha / 3
     significance_levels = [alpha, bonferroni_alpha]
 
     for alpha_value in significance_levels:
-        print(f"Significance level:  alpha = {alpha:.4f}\n")
+        print(f"McNemar's test Significance level:  alpha = {alpha_value:.4f}\n")
 
-        print(f"Single Tree vs Bagging p-value: {p_value_single_tree_bagging:.4f}")
-        if p_value_single_tree_bagging < alpha_value:
-            print("Significant difference.")
+        print(f"Single Tree vs Bagging: p-value = {mcnemar_single_tree_bagging.pvalue:.6f}, chi-square = {mcnemar_single_tree_bagging.statistic}")
+        if mcnemar_single_tree_bagging.pvalue < alpha_value:
+            print(f"Significant difference in accuracy between the models.\nReject the Null Hypothesis: it is very unlikely ({mcnemar_single_tree_bagging.pvalue}<{alpha_value:.4f}) to be true\n")
         else:
-            print("No significant difference.")
+            print("No significant difference in accuracy between the models.\nFail to reject the Null Hypothesis: insufficient evidence to conclude that the null hypothesis is false!\n")
 
-        print(f"Bagging vs Random Forest p-value: {p_value_bagging_rf:.4f}")
-        if p_value_bagging_rf < alpha_value:
-            print("Significant difference.")
+        print(f"Single Tree vs Random Forest: p-value = {mcnemar_single_tree_rf.pvalue:.6f}, chi-square = {mcnemar_single_tree_rf.statistic}")
+        if mcnemar_single_tree_rf.pvalue < alpha_value:
+            print(f"Significant difference in accuracy between the models.\nReject the Null Hypothesis: it is very unlikely ({mcnemar_rf_single_tree.pvalue}<{alpha_value:.4f}) to be true\n")
         else:
-            print("No significant difference.")
+            print("No significant difference in accuracy between the models.\nFail to reject the Null Hypothesis: insufficient evidence to conclude that the null hypothesis is false!\n")
 
-        print(f"Random Forest vs Single Tree p-value: {p_value_rf_single_tree:.4f}")
-        if p_value_rf_single_tree < alpha_value:
-            print("Significant difference.")
+        print(f"Bagging vs Random Forest: p-value = {mcnemar_bagging_rf.pvalue:.6f}, chi-square = {mcnemar_bagging_rf.statistic}")
+        if mcnemar_bagging_rf.pvalue < alpha_value:
+            print(f"Significant difference in accuracy between the models.\nReject the Null Hypothesis: it is very unlikely ({mcnemar_bagging_rf.pvalue}<{alpha_value:.4f}) to be true\n")
         else:
-            print("No significant difference.")
+            print("No significant difference in accuracy between the models.\nFail to reject the Null Hypothesis: insufficient evidence to conclude that the null hypothesis is false!\n")
+
+
 
 
 
