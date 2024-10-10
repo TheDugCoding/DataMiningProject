@@ -4,7 +4,8 @@ import statistics
 
 from statsmodels.stats.contingency_tables import mcnemar
 from tqdm import tqdm
-from multiprocessing import Pool, cpu_count
+
+from concurrent.futures import ProcessPoolExecutor, as_completed
 
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 indians = pd.read_csv('data/indians.txt', delimiter=',', names=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'])
@@ -38,15 +39,16 @@ def best_split(x, y, minleaf):
     best_value = 0
     best_left_child_indexes = []
     best_right_child_indexes = []
-    best_split = ''
+    best_split = None
     impurity_father = impurity(y)
     elements_in_y = len(y)
 
     if len(x) == elements_in_y:
         for split in x.columns:
             # check how many unique values there are
-            sorted_values = np.sort(np.unique(x[split]))
             split_values = x[split]
+            sorted_values = np.sort(np.unique(split_values))
+
 
             #check that we have enough different values for a split
             if len(sorted_values) > 1:
@@ -101,8 +103,10 @@ class Tree:
         self.root = root
         self.leaves = leaves
 
+def make_x(x, cur, cand):
+    return x.loc[cur, cand]
 
-def tree_grow(x, y, nmin, minleaf, nfeat):
+def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
     """
     :param x: rows of the dataset used for creating the tree
     :param y: rows of the target features used for creating the tree
@@ -115,19 +119,18 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
         root = Node(x.index)
         nodelist = [root]
         leaves = []
+        i = 0
 
         # tree grow stops when we split all the nodes, the nodes that cannot be split are removed from the list
-        while nodelist:
+        while i < len(nodelist):
             # visit the first node
-            current_node = nodelist[0]
+            current_node = nodelist[i]
 
             # store the node instances
             current_node_instances = current_node.instances
 
             # store node in the tree before splitting
             labels = y.iloc[current_node_instances]
-
-            nodelist.pop(0)
 
             # avoid splitting leaf nodes with zero impurity and check that there are enough observations for a split
             if impurity(labels) > 0 and len(current_node.instances) >= nmin:
@@ -136,7 +139,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 candidate_features = np.random.choice(x.columns, size=nfeat, replace=False)
 
                 # calculate best split and impurity reduction to get child nodes
-                left, right, feature, threshold = best_split(x.loc[current_node_instances, candidate_features], labels, minleaf)
+                left, right, feature, threshold = best_split(make_x(x, current_node_instances, candidate_features), labels, minleaf)
 
                 # store current node info
                 if feature:
@@ -155,6 +158,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 # return the final prediction of the leaf node
                 current_node.predicted_class = statistics.mode(labels)
                 leaves.append(current_node)
+            i+= 1
         return Tree(root, leaves)
     else:
         raise ValueError("x is empty")
@@ -174,23 +178,18 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     results = []
     random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
 
-    pool = Pool(processes=(cpu_count() - 1))
+    with ProcessPoolExecutor() as executor:
+        futures = []
+        # using parallelization to speed up the process, in case parallelization doesn't work use the commented instruction instead
+        for i in range(m):
+            future = executor.submit(tree_grow, x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat)
+            futures.append(future)
 
-    # tqdm progress bar for asynchronous task completion
-    pbar = tqdm(total=m, desc="Growing Trees", unit=" tree")
-
-    def collect_result(result):
-        """Callback to collect result and update progress bar."""
-        trees.append(result)
-        pbar.update()
-
-    # using parallelization to speed up the process, in case parallelization doesn't work use the commented instruction instead
-    for i in range(m):
-        #trees.append(tree_grow(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat))
-        pool.apply_async(tree_grow, args=(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat), callback=collect_result)
-        #results.append(result)
-    pool.close()
-    pool.join()
+        for future in tqdm(as_completed(futures), total=len(futures)):
+            trees.append(future.result())
+            # trees.append(tree_grow(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat))
+            #pool.apply_async(tree_grow, args=(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat), callback=collect_result)
+            #results.append(result)
 
     return trees
 
