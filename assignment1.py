@@ -50,7 +50,7 @@ def best_split(x, y, minleaf):
                         impurity_reduction = impurity_father - (
                                 ((len(y[indexes_left_child]) / elements_in_y) * impurity(y[indexes_left_child])) +
                                 ((len(y[indexes_right_child]) / elements_in_y) * impurity(y[indexes_right_child])))
-                        # if the impurity reduction obtained with this values is the best one yet, save it
+                        # if the impurity reduction obtained with these values is the best one yet, save it
                         if impurity_reduction > best_impurity_reduction:
                             best_impurity_reduction = impurity_reduction
                             best_split = split
