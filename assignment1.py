@@ -102,9 +102,9 @@ def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
         leaves = []
         i = 0
 
-        # tree grow stops when we split all the nodes, the nodes that cannot be split are removed from the list
+        # tree grow stops when we split all the nodes
         while i < len(nodelist):
-            # visit all the nodes in the list, for optimization we don't use 'pop' we just iterate over all the possible nodes
+            # visit all the nodes in the list, for optimization we don't use 'pop' we just iterate over the nodes
             current_node = nodelist[i]
 
             # store the node instances
@@ -119,10 +119,10 @@ def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
                 # random sample nfeat number of columns
                 candidate_features = np.random.choice(x.columns, size=nfeat, replace=False)
 
-                # calculate best split and impurity reduction to get child nodes
+                # calculate best split and impurity reduction to get child nodes, (if a split is not found feature = None)
                 left, right, feature, threshold = best_split(x.loc[current_node_instances, candidate_features], labels, minleaf)
 
-                # store current node info
+                # store current node info, if it is not a leaf
                 if feature:
                     current_node.left = Node(left)
                     current_node.right = Node(right)
@@ -161,7 +161,7 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     if MULTIPROCESSING:
         with ProcessPoolExecutor() as executor:
             futures = []
-            # using parallelization to speed up the process, in case parallelization doesn't work use the commented instruction instead
+            # using parallelization to speed up the process, in case parallelization doesn't work change value of the variable MULTIPROCESSING to False
             for i in range(m):
                 future = executor.submit(tree_grow, x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat)
                 futures.append(future)
@@ -215,16 +215,16 @@ def tree_pred_b(x, tr):
     for tree in tqdm(tr, desc="Processing Trees Predictions", unit="tree"):
         predicted_labels.append(tree_pred(x, tree))
 
-    # Loop over the list of predicted labels (one list for each tree)
+    # loop over the list of predicted labels (one list for each tree)
     for tree_predictions in tqdm(predicted_labels, desc="Processing Predictions", unit="set"):
-        # Loop over the individual predictions in a tree
+        # loop over the individual predictions in a tree
         for i in range(len(tree_predictions)):
             if i not in majority_votes:
                 majority_votes[i] = 0
-            # Add 1 for '1', subtract 1 for '0'
+            # add 1 for '1', subtract 1 for '0'
             majority_votes[i] += 1 if tree_predictions[i] == 1 else -1
 
-    # Convert the majority_votes dictionary to a list of predictions
+    # convert the majority votes dictionary to a list of predictions
     final_predictions = [1 if majority_votes[i] > 0 else 0 for i in range(len(majority_votes))]
 
     return final_predictions
