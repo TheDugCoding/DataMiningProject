@@ -18,9 +18,10 @@ from tqdm import tqdm
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
+"""
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
 indians = pd.read_csv('data/indians.txt', delimiter=',', names=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'])
-
+"""
 
 #True use multiprocessing, False don't use multiprocessing
 MULTIPROCESSING = True
@@ -243,8 +244,8 @@ def tree_pred_b(x, tr):
 
 if __name__ == '__main__':
 
-    '''
-    code Examples
+    """
+    #code Examples
     #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
 
     single_tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
@@ -280,4 +281,4 @@ if __name__ == '__main__':
             else:
                 pred_true['01'] += 1
     print(pred_true)
-    '''
+    """
