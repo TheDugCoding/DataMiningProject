@@ -14,7 +14,7 @@ eclipse_3 = pd.read_csv('data/eclipse-metrics-packages-3.0.csv', delimiter=';')
 diabetes = pd.read_csv('data/diabetes.csv', delimiter=',')
 
 #True use multiprocessing, False don't use multiprocessing
-MULTIPROCESSING = True
+MULTIPROCESSING = False
 
 # clean data for part 2
 features_data = ['pre', 'post', 'FOUT', 'MLOC', 'NBD', 'PAR', 'VG', 'NOF', 'NOM', 'NSF', 'NSM', 'ACD', 'NOI', 'NOT', 'TLOC', 'NOCU']
@@ -45,7 +45,6 @@ def best_split(x, y, minleaf):
     best_split = None
     impurity_father = impurity(y)
     elements_in_y = len(y)
-    # y = np.array(y)
 
     if len(x) == elements_in_y:
         for split in x.columns:
@@ -105,9 +104,6 @@ class Tree:
         self.root = root
         self.leaves = leaves
 
-def make_x(x, cur, cand):
-    return x.loc[cur, cand]
-
 def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
     """
     :param x: rows of the dataset used for creating the tree
@@ -125,7 +121,7 @@ def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
 
         # tree grow stops when we split all the nodes, the nodes that cannot be split are removed from the list
         while i < len(nodelist):
-            # visit the first node
+            # visit all the nodes in the list, for optimization we don't use 'pop' we just iterate over all the possible nodes
             current_node = nodelist[i]
 
             # store the node instances
@@ -177,7 +173,6 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     :return: the function return a list of trees
     """
     trees = []
-    results = []
     random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
 
     if MULTIPROCESSING:
