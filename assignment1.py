@@ -13,6 +13,9 @@ eclipse_2 = pd.read_csv('data/eclipse-metrics-packages-2.0.csv', delimiter=';')
 eclipse_3 = pd.read_csv('data/eclipse-metrics-packages-3.0.csv', delimiter=';')
 diabetes = pd.read_csv('data/diabetes.csv', delimiter=',')
 
+#True use multiprocessing, False don't use multiprocessing
+MULTIPROCESSING = True
+
 # clean data for part 2
 features_data = ['pre', 'post', 'FOUT', 'MLOC', 'NBD', 'PAR', 'VG', 'NOF', 'NOM', 'NSF', 'NSM', 'ACD', 'NOI', 'NOT', 'TLOC', 'NOCU']
 keep_col_list = []
@@ -177,14 +180,7 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     results = []
     random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
 
-    if False:
-        for i in tqdm(range(m)):
-            tree = tree_grow(     x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(
-                                         drop=True),
-                                     x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin,
-                                     minleaf, nfeat)
-            trees.append(tree)
-    else:
+    if MULTIPROCESSING:
         with ProcessPoolExecutor() as executor:
             futures = []
             # using parallelization to speed up the process, in case parallelization doesn't work use the commented instruction instead
@@ -194,9 +190,15 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
 
             for future in tqdm(as_completed(futures), total=len(futures)):
                 trees.append(future.result())
-                # trees.append(tree_grow(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat))
-                #pool.apply_async(tree_grow, args=(x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat), callback=collect_result)
-                #results.append(result)
+
+    else:
+        for i in tqdm(range(m)):
+            tree = tree_grow(     x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(
+                                         drop=True),
+                                     x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin,
+                                     minleaf, nfeat)
+            trees.append(tree)
+
 
     return trees
 
