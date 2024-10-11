@@ -14,7 +14,7 @@ eclipse_3 = pd.read_csv('data/eclipse-metrics-packages-3.0.csv', delimiter=';')
 diabetes = pd.read_csv('data/diabetes.csv', delimiter=',')
 
 #True use multiprocessing, False don't use multiprocessing
-MULTIPROCESSING = False
+MULTIPROCESSING = True
 
 # clean data for part 2
 features_data = ['pre', 'post', 'FOUT', 'MLOC', 'NBD', 'PAR', 'VG', 'NOF', 'NOM', 'NSF', 'NSM', 'ACD', 'NOI', 'NOT', 'TLOC', 'NOCU']
