@@ -1,3 +1,15 @@
+"""
+Annebelle Olminkhof
+4822048
+a.n.olminkhof@students.uu.nl
+Luca Dughera
+1738380
+l.dughera@students.uu.nl
+Riccardo Campanella
+8175721
+r.campanella@students.uu.nl
+"""
+
 import numpy as np
 import pandas as pd
 import statistics
