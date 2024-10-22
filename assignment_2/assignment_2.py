@@ -20,7 +20,6 @@ data_folder = os.path.join(os.getcwd(), 'assignment_2/data/')
 training_folders = ['fold1', 'fold2', 'fold3', 'fold4']
 testing_folders = ['fold5']
 
-
 # Function to load reviews and labels from a folder
 def load_data_from_folder(main_folder,  folders, label):
     reviews = []
@@ -63,9 +62,9 @@ for i in range(len(combined_reviews_training)):
     # remove stopwords
     word_tokens = word_tokenize(review)
     review = [w for w in word_tokens if not w.lower() in stop_words]
-    reviews_training.append(review)
+    reviews_training.append(' '.join(review))
 
-X_train = pd.DataFrame(reviews_training)
+X_train = pd.DataFrame(reviews_training, columns=['review'])
 y_train = combined_reviews_training['label']
 X_test = combined_reviews_testing['review']
 y_test = combined_reviews_testing['label']
