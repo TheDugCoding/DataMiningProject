@@ -44,3 +44,7 @@ truthful_reviews_testing =  load_data_from_folder(f'{data_folder}truthful_from_W
 # Combine the two datasets into one DataFrame
 combined_reviews_training = pd.concat([deceptive_reviews_training, truthful_reviews_training], ignore_index=True)
 combined_reviews_testing = pd.concat([deceptive_reviews_testing, truthful_reviews_testing], ignore_index=True)
+
+# feature selection
+
+# Estimate Multinomial Naive Bayes
