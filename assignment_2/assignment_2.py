@@ -1,11 +1,9 @@
 import os
 
 import pandas as pd
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import LogisticRegression
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection import train_test_split
+from sklearn.model_selection import train_test_split, GridSearchCV
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
 
 data_folder = os.path.join(os.getcwd(), 'data\\')
@@ -44,3 +42,41 @@ truthful_reviews_testing =  load_data_from_folder(f'{data_folder}truthful_from_W
 # Combine the two datasets into one DataFrame
 combined_reviews_training = pd.concat([deceptive_reviews_training, truthful_reviews_training], ignore_index=True)
 combined_reviews_testing = pd.concat([deceptive_reviews_testing, truthful_reviews_testing], ignore_index=True)
+
+
+vectorizer = TfidfVectorizer(ngram_range=(1, 2))  # You can use ngrams to add bigram features
+X_train = vectorizer.fit_transform(combined_reviews_training['review'])
+X_test = vectorizer.transform(combined_reviews_testing['review'])
+
+y_train = combined_reviews_training['label']
+y_test = combined_reviews_testing['label']
+
+# Step 2: Train a classification tree using cross-validation for hyperparameter tuning
+# We'll tune the 'ccp_alpha' parameter (cost-complexity pruning)
+
+# Define the decision tree model
+decision_tree = DecisionTreeClassifier(random_state=42)
+
+# Hyperparameter tuning using GridSearchCV for finding the best 'ccp_alpha'
+param_grid = {'ccp_alpha': [0.0, 0.001, 0.01, 0.1]}  # Example values for alpha
+grid_search = GridSearchCV(decision_tree, param_grid, cv=5, scoring='accuracy')
+grid_search.fit(X_train, y_train)
+
+# Best model after hyperparameter tuning
+best_tree = grid_search.best_estimator_
+
+# Step 3: Evaluate the model on the test set
+y_pred = best_tree.predict(X_test)
+
+# Step 4: Calculate performance metrics
+accuracy = accuracy_score(y_test, y_pred)
+precision = precision_score(y_test, y_pred)
+recall = recall_score(y_test, y_pred)
+f1 = f1_score(y_test, y_pred)
+
+# Print out the results
+print("Best Decision Tree Model:", best_tree)
+print(f"Accuracy: {accuracy:.4f}")
+print(f"Precision: {precision:.4f}")
+print(f"Recall: {recall:.4f}")
+print(f"F1 Score: {f1:.4f}")
