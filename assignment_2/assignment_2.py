@@ -5,6 +5,8 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.ensemble import RandomForestClassifier
+
 
 data_folder = os.path.join(os.getcwd(), 'data\\')
 training_folders = ['fold1', 'fold2', 'fold3', 'fold4']
@@ -57,7 +59,7 @@ y_test = combined_reviews_testing['label']
 # Define the decision tree model
 decision_tree = DecisionTreeClassifier(random_state=42)
 
-# Hyperparameter tuning using GridSearchCV for finding the best 'ccp_alpha'
+# Hyperparameter tuning using GridSearchCV for finding the best 'ccp_alpha', it also automatically apply cross validation
 param_grid = {'ccp_alpha': [0.0, 0.001, 0.01, 0.1]}  # Example values for alpha
 grid_search = GridSearchCV(decision_tree, param_grid, cv=5, scoring='accuracy')
 grid_search.fit(X_train, y_train)
@@ -80,3 +82,40 @@ print(f"Accuracy: {accuracy:.4f}")
 print(f"Precision: {precision:.4f}")
 print(f"Recall: {recall:.4f}")
 print(f"F1 Score: {f1:.4f}")
+
+
+#random forest
+
+
+
+random_forest = RandomForestClassifier(random_state=42)
+
+# Define the hyperparameter grid
+param_grid_rf = {
+    'n_estimators': [100, 200, 300],  # Number of trees
+    'max_features': ['sqrt', 'log2', None],  # Number of features to consider for splits
+    'max_depth': [None, 10, 20, 30]  # Maximum depth of the trees
+}
+
+# GridSearchCV to find the best parameters
+grid_search_rf = GridSearchCV(random_forest, param_grid_rf, cv=5, scoring='accuracy', n_jobs=-1)
+grid_search_rf.fit(X_train, y_train)
+
+# Best model after hyperparameter tuning
+best_rf = grid_search_rf.best_estimator_
+
+# Step 3: Evaluate the Random Forest model on the test set
+y_pred_rf = best_rf.predict(X_test)
+
+# Step 4: Calculate performance metrics
+accuracy_rf = accuracy_score(y_test, y_pred_rf)
+precision_rf = precision_score(y_test, y_pred_rf)
+recall_rf = recall_score(y_test, y_pred_rf)
+f1_rf = f1_score(y_test, y_pred_rf)
+
+# Print out the results
+print("Best Random Forest Model:", best_rf)
+print(f"Random Forest Accuracy: {accuracy_rf:.4f}")
+print(f"Random Forest Precision: {precision_rf:.4f}")
+print(f"Random Forest Recall: {recall_rf:.4f}")
+print(f"Random Forest F1 Score: {f1_rf:.4f}")
