@@ -2,7 +2,6 @@ import os
 import string
 import pandas as pd
 import nltk
-import textmining
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.naive_bayes import MultinomialNB
@@ -11,6 +10,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
+from sklearn.feature_extraction.text import CountVectorizer
 
 # downloads and saves stopwords to remove
 nltk.download('stopwords')
@@ -40,6 +40,23 @@ def load_data_from_folder(main_folder,  folders, label):
 
     return pd.DataFrame({'review': reviews, 'label': labels})
 
+def clean_data(dataset):
+    clean_list = []
+    for i in range(len(dataset)):
+        review = dataset['review'][i].translate(str.maketrans('', '', string.punctuation)).lower()
+        # remove numbers
+        review = ''.join([i for i in review if not i.isdigit()])
+        # remove stopwords
+        word_tokens = word_tokenize(review)
+        review = [w for w in word_tokens if not w.lower() in stop_words]
+        clean_list.append(' '.join(review))
+    return clean_list
+
+def transform(list):
+    vec = CountVectorizer()
+    matrix = vec.fit_transform(list)
+    df = pd.DataFrame(matrix.toarray(), columns=vec.get_feature_names_out())
+    return df
 
 # load the data for negative review and put a 0
 deceptive_reviews_training = load_data_from_folder(f'{data_folder}deceptive_from_MTurk', training_folders, label=0)
@@ -54,41 +71,19 @@ combined_reviews_training = pd.concat([deceptive_reviews_training, truthful_revi
 combined_reviews_testing = pd.concat([deceptive_reviews_testing, truthful_reviews_testing], ignore_index=True)
 
 # pre-processing
-tdm_training = textmining.TermDocumentMatrix()
-for i in range(len(combined_reviews_training)):
-    # make string lowercase and strip punctuation
-    review = combined_reviews_training['review'][i].translate(str.maketrans('', '', string.punctuation)).lower()
-    # remove numbers
-    review = ''.join([i for i in review if not i.isdigit()])
-    # remove stopwords
-    word_tokens = word_tokenize(review)
-    review = [w for w in word_tokens if not w.lower() in stop_words]
-    tdm_training.add_doc(' '.join(review))
+tdm_training = clean_data(combined_reviews_training)
+tdm_testing = clean_data(combined_reviews_testing)
 
-tdm_testing = textmining.TermDocumentMatrix()
-for i in range(len(combined_reviews_testing)):
-    # make string lowercase and strip punctuation
-    review = combined_reviews_testing['review'][i].translate(str.maketrans('', '', string.punctuation)).lower()
-    # remove numbers
-    review = ''.join([i for i in review if not i.isdigit()])
-    # remove stopwords
-    word_tokens = word_tokenize(review)
-    review = [w for w in word_tokens if not w.lower() in stop_words]
-    tdm_testing.add_doc(' '.join(review))
-
-tdm_training.write_csv('train.csv', cutoff=1)
-tdm_testing.write_csv('test.csv', cutoff=1)
-
-
-# X_train = pd.DataFrame(tdm_testing, columns=['review'])
-# y_train = combined_reviews_training['label']
-# X_test = pd.DataFrame(tdm_testing, columns=['review'])
-# y_test = combined_reviews_testing['label']
-
-print(tdm_training)
+X_train = transform(tdm_training)
+# remove sparse terms by using terms found at least 50 times
+# could be done by appearance in % of docs instead
+X_train = X_train[X_train.columns[X_train.sum() >= 50]]
+y_train = combined_reviews_training['label']
+X_test = transform(tdm_testing)
+y_test = combined_reviews_testing['label']
 
 # use CV for built-in cross validation, for now use C=1
 regress = LogisticRegression(C=1, penalty='l1', solver='liblinear')
-# regress.fit(X_train, y_train)
-# score = regress.score(X_test, y_test)
-# print(score)
+regress.fit(X_train, y_train)
+score = regress.score(X_test, y_test)
+print(score)
