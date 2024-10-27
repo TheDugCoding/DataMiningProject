@@ -2,6 +2,7 @@ import os
 import string
 import pandas as pd
 import nltk
+import textmining
 from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.naive_bayes import MultinomialNB
@@ -53,7 +54,7 @@ combined_reviews_training = pd.concat([deceptive_reviews_training, truthful_revi
 combined_reviews_testing = pd.concat([deceptive_reviews_testing, truthful_reviews_testing], ignore_index=True)
 
 # pre-processing
-reviews_training = []
+tdm_training = textmining.TermDocumentMatrix()
 for i in range(len(combined_reviews_training)):
     # make string lowercase and strip punctuation
     review = combined_reviews_training['review'][i].translate(str.maketrans('', '', string.punctuation)).lower()
@@ -62,14 +63,29 @@ for i in range(len(combined_reviews_training)):
     # remove stopwords
     word_tokens = word_tokenize(review)
     review = [w for w in word_tokens if not w.lower() in stop_words]
-    reviews_training.append(' '.join(review))
+    tdm_training.add_doc(' '.join(review))
 
-X_train = pd.DataFrame(reviews_training, columns=['review'])
-y_train = combined_reviews_training['label']
-X_test = combined_reviews_testing['review']
-y_test = combined_reviews_testing['label']
+tdm_testing = textmining.TermDocumentMatrix()
+for i in range(len(combined_reviews_testing)):
+    # make string lowercase and strip punctuation
+    review = combined_reviews_testing['review'][i].translate(str.maketrans('', '', string.punctuation)).lower()
+    # remove numbers
+    review = ''.join([i for i in review if not i.isdigit()])
+    # remove stopwords
+    word_tokens = word_tokenize(review)
+    review = [w for w in word_tokens if not w.lower() in stop_words]
+    tdm_testing.add_doc(' '.join(review))
 
-print(X_train)
+tdm_training.write_csv('train.csv', cutoff=1)
+tdm_testing.write_csv('test.csv', cutoff=1)
+
+
+# X_train = pd.DataFrame(tdm_testing, columns=['review'])
+# y_train = combined_reviews_training['label']
+# X_test = pd.DataFrame(tdm_testing, columns=['review'])
+# y_test = combined_reviews_testing['label']
+
+print(tdm_training)
 
 # use CV for built-in cross validation, for now use C=1
 regress = LogisticRegression(C=1, penalty='l1', solver='liblinear')
