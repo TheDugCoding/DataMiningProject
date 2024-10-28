@@ -124,10 +124,14 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     :param m: number of trees to be created
     :return: the function return a list of trees
     """
-    trees = []
-    random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
     if not isinstance(x, pd.DataFrame):
         x = pd.DataFrame(x)
+    if not isinstance(target_feature, pd.DataFrame):
+        y = pd.Series(target_feature)
+
+    trees = []
+    random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
+
 
 
     if MULTIPROCESSING:
@@ -135,7 +139,7 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
             futures = []
             # using parallelization to speed up the process, in case parallelization doesn't work change value of the variable MULTIPROCESSING to False
             for i in range(m):
-                future = executor.submit(tree_grow, x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat)
+                future = executor.submit(tree_grow, x.loc[random_indexes_with_replacement[i]].reset_index(drop=True), y, nmin, minleaf, nfeat)
                 futures.append(future)
 
             for future in tqdm(as_completed(futures), total=len(futures)):
@@ -159,6 +163,8 @@ def tree_pred_b(x, tr):
     :return: a list containing the final predictions, where each prediction is made
     by selecting the class that received the most votes.
     """
+    if not isinstance(x, pd.DataFrame):
+        x = pd.DataFrame(x)
     majority_votes = {}
     predicted_labels = []
 
