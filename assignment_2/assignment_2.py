@@ -12,7 +12,7 @@ import numpy as np
 data_folder = os.path.join(os.getcwd(), 'data\\')
 training_folders = ['fold1', 'fold2', 'fold3', 'fold4']
 testing_folders = ['fold5']
-n_grams_range = [(1,1), (1,2)]
+n_grams_range = [(1,1), (1,2), (2,2)]
 
 # Function to load reviews and labels from a folder
 def load_data_from_folder(main_folder,  folders, label):
@@ -48,7 +48,7 @@ combined_reviews_testing = pd.concat([deceptive_reviews_testing, truthful_review
 
 for n_gram in n_grams_range:
     print(f"\n\n\n---number of ngrams: {n_gram}")
-    vectorizer =  TfidfVectorizer(ngram_range=n_gram, max_df=0.8, min_df=2, stop_words='english')
+    vectorizer =  TfidfVectorizer(ngram_range=n_gram, max_df=0.9, min_df=2, stop_words='english')
     X_train = vectorizer.fit_transform(combined_reviews_training['review'])
     X_test = vectorizer.transform(combined_reviews_testing['review'])
 
@@ -62,7 +62,10 @@ for n_gram in n_grams_range:
     decision_tree = DecisionTreeClassifier(random_state=42)
 
     # Hyperparameter tuning using GridSearchCV for finding the best 'ccp_alpha', it also automatically apply cross validation
-    param_grid = {'ccp_alpha': [0.0, 0.001, 0.01, 0.1]}  # Example values for alpha
+    param_grid = {
+        'ccp_alpha': [0.0, 0.001, 0.01, 0.1],  # Cost-complexity pruning parameter
+        'max_depth': [None, 10, 20, 30]  # Add max depth to control the depth of the tree
+    }  # Example values for alpha
     grid_search = GridSearchCV(decision_tree, param_grid, cv=5, scoring='accuracy')
     grid_search.fit(X_train, y_train)
 
@@ -84,6 +87,7 @@ for n_gram in n_grams_range:
     print(f"Precision: {precision:.4f}")
     print(f"Recall: {recall:.4f}")
     print(f"F1 Score: {f1:.4f}")
+    print(f"max depth: {best_tree.max_depth}")
 
     # Get feature names from the vectorizer
     feature_names = vectorizer.get_feature_names_out()
@@ -109,7 +113,7 @@ for n_gram in n_grams_range:
     # Define the hyperparameter grid
     param_grid_rf = {
         'n_estimators': [100, 200, 300],  # Number of trees
-        'max_features': ['sqrt', 'log2', None],  # Number of features to consider for splits
+        'max_features': ['sqrt', 'log2', None, 5, 10],  # Number of features to consider for splits
         'max_depth': [None, 10, 20, 30]  # Maximum depth of the trees
     }
 
@@ -124,7 +128,7 @@ for n_gram in n_grams_range:
     y_pred_rf = best_rf.predict(X_test)
 
     # Get the OOB score
-    oob_accuracy = random_forest.oob_score
+    oob_accuracy = best_rf.oob_score
 
     # Step 4: Calculate performance metrics
     accuracy_rf = accuracy_score(y_test, y_pred_rf)
@@ -138,6 +142,10 @@ for n_gram in n_grams_range:
     print(f"Random Forest Precision: {precision_rf:.4f}")
     print(f"Random Forest Recall: {recall_rf:.4f}")
     print(f"Random Forest F1 Score: {f1_rf:.4f}")
+    # Get the maximum depth of each tree in the random forest
+    max_depths = [tree.tree_.max_depth for tree in best_rf.estimators_]
+    # Display the maximum depth of the entire forest (deepest tree)
+    print(f"Maximum depth among all trees: {max(max_depths)}")
     print(f"OOB Accuracy: {oob_accuracy:.4f}")
 
     # Get the feature importances from the decision tree
