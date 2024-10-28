@@ -31,7 +31,7 @@ MULTIPROCESSING = True
 def tree_grow(x, y, nmin, minleaf, nfeat):
     """
     :param x: rows of the dataset used for creating the tree
-    :param y: rows of the target features used for creating the tree
+    :param y: rows of the target feature used for creating the tree
     :param nmin: the number of observations that a node must contain at least, for it to be allowed to be split
     :param minleaf: minimum number of observations required for a leaf node
     :param nfeat: number of features that should be considered for each split
@@ -114,10 +114,10 @@ def tree_pred(x, tr):
 
     return predicted_labels
 
-def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
+def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
     """
     :param x: rows of the dataset used for creating the tree
-    :param target_feature: name of the feature used for classification
+    :param y: column of the feature used for classification
     :param nmin: the number of observations that a node must contain at least, for it to be allowed to be split.
     :param minleaf: minimum number of observations required for a leaf node
     :param nfeat: number of features used to select the best split
@@ -126,8 +126,8 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     """
     if not isinstance(x, pd.DataFrame):
         x = pd.DataFrame(x)
-    if not isinstance(target_feature, pd.DataFrame):
-        y = pd.Series(target_feature)
+    if not isinstance(y, pd.DataFrame):
+        y = pd.Series(y)
 
     trees = []
     random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
@@ -147,10 +147,7 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
 
     else:
         for i in tqdm(range(m)):
-            tree = tree_grow(     x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(
-                                         drop=True),
-                                     x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin,
-                                     minleaf, nfeat)
+            tree = tree_grow(tree_grow, x.loc[random_indexes_with_replacement[i]].reset_index(drop=True), y, nmin, minleaf, nfeat)
             trees.append(tree)
 
 
