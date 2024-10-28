@@ -13,6 +13,7 @@ r.campanella@students.uu.nl
 import numpy as np
 import pandas as pd
 import statistics
+from numpy import genfromtxt
 
 from tqdm import tqdm
 
@@ -27,7 +28,7 @@ indians = pd.read_csv('data/indians.txt', delimiter=',', names=['a', 'b', 'c', '
 #True use multiprocessing, False don't use multiprocessing
 MULTIPROCESSING = True
 
-def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
+def tree_grow(x, y, nmin, minleaf, nfeat):
     """
     :param x: rows of the dataset used for creating the tree
     :param y: rows of the target features used for creating the tree
@@ -36,6 +37,16 @@ def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
     :param nfeat: number of features that should be considered for each split
     :return: the function returns a binary tree
     """
+    if not isinstance(x, pd.DataFrame):
+        x = pd.DataFrame(x)
+        # Generate five random names for columns
+        random_names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']
+        # Assign these names as the column names in the DataFrame
+        x.columns = random_names[:x.shape[1]]
+
+    if not isinstance(y, pd.DataFrame):
+        y = pd.DataFrame(y)
+
     if not x.empty:
         root = Node(x.index)
         nodelist = [root]
@@ -90,6 +101,9 @@ def tree_pred(x, tr):
     :param tr: the tree that we are using for the prediction
     :return: a single dimensional array containing the prediction of the tree
     """
+    if not isinstance(x, pd.DataFrame):
+        x = pd.DataFrame(x)
+
     predicted_labels = []
     for index, row in x.iterrows():
         current_node = tr.root
@@ -221,7 +235,10 @@ def impurity(x):
     :return: the functions returns the Gini impurity
     """
     if len(x) > 0:
-        prob_0 = statistics.fmean(x)
+        sum = 0
+        for i in x:
+            sum += i
+        prob_0 = sum/len(x)
         prob_1 = 1-prob_0
         return prob_0 * prob_1
     else:
@@ -242,6 +259,63 @@ class Tree:
         self.leaves = leaves
 
 if __name__ == '__main__':
+
+    # Basic test on credit data. Prediction should be perfect.
+
+    credit_data = genfromtxt('credit.txt', delimiter=',', skip_header=True)
+    credit_x = credit_data[:, 0:5]
+    credit_y = credit_data[:, 5]
+
+
+    credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
+    credit_pred = tree_pred(credit_x, credit_tree)
+    pd.crosstab(np.array(credit_y), np.array(credit_pred))
+
+    # Single tree on pima data
+
+    pima_data = genfromtxt('C:/MyData/Data Mining 2022/pima.txt', delimiter=',')
+    pima_x = pima_data[:, 0:8]
+    pima_y = pima_data[:, 8]
+    pima_tree = tree_grow(pima_x, pima_y, 20, 5, 8)
+    pima_pred = tree_pred(pima_x, pima_tree)
+
+    # confusion matrix should be: 444,56,54,214 (50/50 leaf nodes assigned to class 0)
+    # or: 441,59,51,217 (50/50 leaf nodes assigned to class 1)
+
+    pd.crosstab(np.array(pima_y), np.array(pima_pred))
+
+
+    # Function for testing single tree
+
+    def single_test(x, y, nmin, minleaf, nfeat, n):
+        acc = np.zeros(n)
+        for i in range(0, n):
+            tr = tree_grow(x, y, nmin, minleaf, nfeat)
+            pred = tree_pred(x, tr)
+            acc[i] = sum(pred == y) / len(y)
+        return [np.mean(acc), np.std(acc)]
+
+
+    # Function for testing bagging/random forest
+
+    def rf_test(x, y, nmin, minleaf, nfeat, m, n):
+        acc = np.zeros(n)
+        for i in range(0, n):
+            tr_list = tree_grow_b(x, y, nmin, minleaf, nfeat, m)
+            pred = tree_pred_b(x, tr_list)
+            acc[i] = sum(pred == y) / len(y)
+        return [np.mean(acc), np.std(acc)]
+
+
+    # Compute average and standard deviation of accuracy for single tree
+
+    single_test(pima_x, pima_y, 20, 5, 2, 25)
+    single_test(pima_x, pima_y, 20, 5, 8, 25)
+
+    # Compute average and standard deviation of accuracy for bagging/random forest
+
+    rf_test(pima_x, pima_y, 20, 5, 2, 25, 25)
+    rf_test(pima_x, pima_y, 20, 5, 8, 25, 25)
 
     """
     #code Examples
