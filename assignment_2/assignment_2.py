@@ -43,6 +43,7 @@ def load_data_from_folder(main_folder,  folders, label):
 def clean_data(dataset):
     clean_list = []
     for i in range(len(dataset)):
+        # remove punctuation
         review = dataset['review'][i].translate(str.maketrans('', '', string.punctuation)).lower()
         # remove numbers
         review = ''.join([i for i in review if not i.isdigit()])
