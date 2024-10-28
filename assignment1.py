@@ -39,13 +39,8 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
     """
     if not isinstance(x, pd.DataFrame):
         x = pd.DataFrame(x)
-        # Generate five random names for columns
-        random_names = ['Alice', 'Bob', 'Charlie', 'Diana', 'Eve']
-        # Assign these names as the column names in the DataFrame
-        x.columns = random_names[:x.shape[1]]
-
     if not isinstance(y, pd.DataFrame):
-        y = pd.DataFrame(y)
+        y = pd.Series(y)
 
     if not x.empty:
         root = Node(x.index)
@@ -131,6 +126,9 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     """
     trees = []
     random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
+    if not isinstance(x, pd.DataFrame):
+        x = pd.DataFrame(x)
+
 
     if MULTIPROCESSING:
         with ProcessPoolExecutor() as executor:
@@ -235,10 +233,7 @@ def impurity(x):
     :return: the functions returns the Gini impurity
     """
     if len(x) > 0:
-        sum = 0
-        for i in x:
-            sum += i
-        prob_0 = sum/len(x)
+        prob_0 = statistics.fmean(x)
         prob_1 = 1-prob_0
         return prob_0 * prob_1
     else:
@@ -273,7 +268,7 @@ if __name__ == '__main__':
 
     # Single tree on pima data
 
-    pima_data = genfromtxt('C:/MyData/Data Mining 2022/pima.txt', delimiter=',')
+    pima_data = genfromtxt('pima.txt', delimiter=',')
     pima_x = pima_data[:, 0:8]
     pima_y = pima_data[:, 8]
     pima_tree = tree_grow(pima_x, pima_y, 20, 5, 8)
@@ -282,7 +277,7 @@ if __name__ == '__main__':
     # confusion matrix should be: 444,56,54,214 (50/50 leaf nodes assigned to class 0)
     # or: 441,59,51,217 (50/50 leaf nodes assigned to class 1)
 
-    pd.crosstab(np.array(pima_y), np.array(pima_pred))
+    print(pd.crosstab(np.array(pima_y), np.array(pima_pred)))
 
 
     # Function for testing single tree
