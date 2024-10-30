@@ -1,25 +1,21 @@
 import os
-import string
 import pandas as pd
+import numpy as np
 import nltk
-from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from sklearn.naive_bayes import MultinomialNB
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import LogisticRegressionCV
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-from sklearn.feature_extraction.text import CountVectorizer
-
-# downloads and saves stopwords to remove
-nltk.download('stopwords')
-nltk.download('punkt_tab')
-stop_words = set(stopwords.words('english'))
+from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 
 data_folder = os.path.join(os.getcwd(), 'assignment_2/data/')
 training_folders = ['fold1', 'fold2', 'fold3', 'fold4']
 testing_folders = ['fold5']
+n_grams_range = [(1,1), (1,2), (2,2)]
+removing_words = [2, 4, 6, 8, 10]
 
 # Function to load reviews and labels from a folder
 def load_data_from_folder(main_folder,  folders, label):
@@ -40,25 +36,6 @@ def load_data_from_folder(main_folder,  folders, label):
 
     return pd.DataFrame({'review': reviews, 'label': labels})
 
-def clean_data(dataset):
-    clean_list = []
-    for i in range(len(dataset)):
-        # remove punctuation
-        review = dataset['review'][i].translate(str.maketrans('', '', string.punctuation)).lower()
-        # remove numbers
-        review = ''.join([i for i in review if not i.isdigit()])
-        # remove stopwords
-        word_tokens = word_tokenize(review)
-        review = [w for w in word_tokens if not w.lower() in stop_words]
-        clean_list.append(' '.join(review))
-    return clean_list
-
-def transform(list):
-    vec = CountVectorizer()
-    matrix = vec.fit_transform(list)
-    df = pd.DataFrame(matrix.toarray(), columns=vec.get_feature_names_out())
-    return df
-
 # load the data for negative review and put a 0
 deceptive_reviews_training = load_data_from_folder(f'{data_folder}deceptive_from_MTurk', training_folders, label=0)
 deceptive_reviews_testing = load_data_from_folder(f'{data_folder}deceptive_from_MTurk', testing_folders, label=0)
@@ -72,19 +49,27 @@ combined_reviews_training = pd.concat([deceptive_reviews_training, truthful_revi
 combined_reviews_testing = pd.concat([deceptive_reviews_testing, truthful_reviews_testing], ignore_index=True)
 
 # pre-processing
-tdm_training = clean_data(combined_reviews_training)
-tdm_testing = clean_data(combined_reviews_testing)
+for n_gram in n_grams_range:
+    for words_to_remove in removing_words:
+        def transform(train, test):
+            vectorizer =  TfidfVectorizer(ngram_range=n_gram, max_df=0.9, min_df=words_to_remove, stop_words='english')
+            X_train = vectorizer.fit_transform(train)
+            X_test = vectorizer.transform(test)
+            feature_names = vectorizer.get_feature_names_out()
+            return X_train, X_test, feature_names
 
-X_train = transform(tdm_training)
-# remove sparse terms by using terms found at least 50 times
-# could be done by appearance in % of docs instead
-X_train = X_train[X_train.columns[X_train.sum() >= 50]]
-y_train = combined_reviews_training['label']
-X_test = transform(tdm_testing)
-y_test = combined_reviews_testing['label']
 
-# use CV for built-in cross validation, for now use C=1
-regress = LogisticRegression(C=1, penalty='l1', solver='liblinear')
-regress.fit(X_train, y_train)
-score = regress.score(X_test, y_test)
-print(score)
+        X_train, X_test, feature_names = transform(combined_reviews_training['review'], combined_reviews_testing['review'])
+        y_train = combined_reviews_training['label']
+        y_test = combined_reviews_testing['label']
+
+        # use CV for built-in cross validation
+        regress = LogisticRegressionCV(penalty='l1', solver='liblinear')
+        regress.fit(X_train, y_train)
+        y_pred = regress.predict(X_test)
+
+        coefficients = regress.coef_[0]
+        feature_importance = pd.DataFrame({'Feature': feature_names, 'Importance': np.abs(coefficients)})
+        feature_importance = feature_importance.sort_values('Importance', ascending=False)
+        scores = classification_report(y_test, y_pred)
+        print(n_gram, words_to_remove, scores, feature_importance[:5])
