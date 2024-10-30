@@ -9,7 +9,9 @@ from sklearn.feature_selection import mutual_info_classif, SelectKBest
 from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, classification_report
-#nltk.download('punkt_tab')
+import matplotlib.pyplot as plt
+
+nltk.download('punkt_tab')
 
 
 data_folder = os.path.join(os.getcwd(), 'data\\')
@@ -66,7 +68,7 @@ def preprocess_text(text):
     return ' '.join(text)
 
 X_train = combined_reviews_training['review'].apply(preprocess_text)
-y_train = combined_reviews_training['label'].apply(preprocess_text)
+y_train = combined_reviews_training['label']
 X_test = combined_reviews_testing['review']
 y_test = combined_reviews_testing['label']
 
@@ -93,9 +95,8 @@ y_pred = nb_classifier.predict(X_test_selected)
 
 # Print performance metrics
 print("\nClassification Report:")
-classification_report = classification_report(y_test, y_pred)
-
-print(classification_report(y_test, y_pred))
+classification_report = classification_report(y_test, y_pred, output_dict=True)
+print(classification_report)
 
 # Get feature importance information
 feature_names = tfidf_vectorizer.get_feature_names_out()
@@ -112,7 +113,7 @@ for feature, score in top_features:
 # Print model parameters
 print("\nModel Parameters:")
 print("Number of features selected:", n_features)
-print("Class prior probabilities:", nb_classifier.class_prior_)
+print("Class prior probabilities:", nb_classifier.class_prior)
 print("Number of samples used for training:", X_train_selected.shape[0])
 
 # Print feature sparsity information
