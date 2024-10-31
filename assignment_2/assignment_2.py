@@ -13,7 +13,7 @@ data_folder = os.path.join(os.getcwd(), 'data\\')
 training_folders = ['fold1', 'fold2', 'fold3', 'fold4']
 testing_folders = ['fold5']
 n_grams_range = [(1,1), (1,2), (2,2)]
-removing_words = [2, 4, 6, 8, 10]
+removing_words = [2, 4, 6, 8, 10, 20, 22, 23, 24]
 
 # Function to load reviews and labels from a folder
 def load_data_from_folder(main_folder,  folders, label):
