@@ -8,12 +8,12 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from sklearn.ensemble import RandomForestClassifier
 import numpy as np
 import matplotlib.pyplot as plt
-
+import seaborn as sns
 
 data_folder = os.path.join(os.getcwd(), 'data\\')
 training_folders = ['fold1', 'fold2', 'fold3', 'fold4']
 testing_folders = ['fold5']
-removing_words = [8, 23]
+removing_words = [8]
 
 # Function to load reviews and labels from a folder
 def load_data_from_folder(main_folder,  folders, label):
@@ -60,9 +60,12 @@ for words_to_remove in removing_words:
     y_train = combined_reviews_training['label']
     y_test = combined_reviews_testing['label']
 
+    # Get feature names from the vectorizer
+    feature_names = vectorizer.get_feature_names_out()
+
     # Step 2: Train a classification tree using cross-validation for hyperparameter tuning
     # We'll tune the 'ccp_alpha' parameter (cost-complexity pruning)
-
+    """
     # Define the decision tree model
     decision_tree = DecisionTreeClassifier(random_state=42)
 
@@ -113,7 +116,7 @@ for words_to_remove in removing_words:
     print(f"F1 Score: {f1:.4f}")
     # Output Decision Tree metrics
     print("Best Decision Tree Model:", best_tree)
-    """
+    
     print(f"Accuracy: {accuracy:.4f}")
     print(f"Precision (Negative Class): {precision[0]:.4f}")  # Accessing negative class precision
     print(f"Recall (Negative Class): {recall[0]:.4f}")  # Accessing negative class recall
@@ -121,10 +124,9 @@ for words_to_remove in removing_words:
     print(f"Precision (Positive Class): {precision[1]:.4f}")  # Accessing positive class precision
     print(f"Recall (Positive Class): {recall[1]:.4f}")  # Accessing positive class recall
     print(f"F1 Score (Positive Class): {f1[1]:.4f}")
-    """
+    
 
-    # Get feature names from the vectorizer
-    feature_names = vectorizer.get_feature_names_out()
+    
 
     # Get the feature importances from the decision tree
     importances_tree = best_tree.feature_importances_
@@ -140,19 +142,26 @@ for words_to_remove in removing_words:
     print("Top 5 important features for Decision Tree:")
     print('real', feature_importance_pos['Feature'].values,'fake', feature_importance_neg['Feature'].values)
 
+    feature_plot = sns.barplot(feature_importance_pos, x='Feature', y='Importance')
+    feature_plot.set_title('Top 5 features for class 1')
+    fig = feature_plot.get_figure()
+    fig.savefig('feature_logistic_pos')
+    fig.clf()
 
-
+    feature_plot = sns.barplot(feature_importance_neg, x='Feature', y='Importance')
+    feature_plot.set_title('Top 5 features for class 0')
+    fig = feature_plot.get_figure()
+    fig.savefig('feature_logistic_neg')
+    """
     #random forest
-
-
 
     random_forest = RandomForestClassifier(random_state=42, oob_score=True)
 
     # Define the hyperparameter grid
     param_grid_rf = {
-        'n_estimators': [50, 100, 200, 300],  # Number of trees
-        'max_features': ['sqrt', 'log2', None],  # Number of features to consider for splits
-        'max_depth': [None, 10, 20, 30],  # Maximum depth of the trees
+        'n_estimators': [300],  # Number of trees
+        'max_features': ['log2'],  # Number of features to consider for splits
+        'max_depth': [30],  # Maximum depth of the trees
     }
 
     # GridSearchCV to find the best parameters
@@ -221,6 +230,17 @@ for words_to_remove in removing_words:
     # Print the top 5 most important features
     print("Top 5 important features for Decision Tree:")
     print('real', feature_importance_pos['Feature'].values, 'fake', feature_importance_neg['Feature'].values)
+
+    feature_plot = sns.barplot(feature_importance_pos, x='Feature', y='Importance')
+    feature_plot.set_title('Top 5 features for class 1')
+    fig = feature_plot.get_figure()
+    fig.savefig('feature_logistic_pos')
+    fig.clf()
+
+    feature_plot = sns.barplot(feature_importance_neg, x='Feature', y='Importance')
+    feature_plot.set_title('Top 5 features for class 0')
+    fig = feature_plot.get_figure()
+    fig.savefig('feature_logistic_neg')
 
 # Plotting the metrics for Decision Tree
 plt.figure(figsize=(12, 8))
