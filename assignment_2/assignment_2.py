@@ -13,7 +13,7 @@ import seaborn as sns
 data_folder = os.path.join(os.getcwd(), 'data\\')
 training_folders = ['fold1', 'fold2', 'fold3', 'fold4']
 testing_folders = ['fold5']
-removing_words = [8]
+removing_words = [23]
 
 # Function to load reviews and labels from a folder
 def load_data_from_folder(main_folder,  folders, label):
@@ -65,15 +65,13 @@ for words_to_remove in removing_words:
 
     # Step 2: Train a classification tree using cross-validation for hyperparameter tuning
     # We'll tune the 'ccp_alpha' parameter (cost-complexity pruning)
-    """
+
     # Define the decision tree model
     decision_tree = DecisionTreeClassifier(random_state=42)
 
     # Hyperparameter tuning using GridSearchCV for finding the best 'ccp_alpha', it also automatically apply cross validation
     param_grid = {
         'criterion': ['gini', 'entropy'],
-        'ccp_alpha': [0.0, 0.01, 0.02, 0.03],  # Cost-complexity pruning parameter
-        'max_depth': [None, 10, 20, 30],  # Add max depth to control the depth of the tree
 
     }  # Example values for alpha
     grid_search = GridSearchCV(decision_tree, param_grid, cv=5, scoring='accuracy')
@@ -116,7 +114,7 @@ for words_to_remove in removing_words:
     print(f"F1 Score: {f1:.4f}")
     # Output Decision Tree metrics
     print("Best Decision Tree Model:", best_tree)
-    
+    """
     print(f"Accuracy: {accuracy:.4f}")
     print(f"Precision (Negative Class): {precision[0]:.4f}")  # Accessing negative class precision
     print(f"Recall (Negative Class): {recall[0]:.4f}")  # Accessing negative class recall
@@ -124,7 +122,7 @@ for words_to_remove in removing_words:
     print(f"Precision (Positive Class): {precision[1]:.4f}")  # Accessing positive class precision
     print(f"Recall (Positive Class): {recall[1]:.4f}")  # Accessing positive class recall
     print(f"F1 Score (Positive Class): {f1[1]:.4f}")
-    
+    """
 
     
 
@@ -136,11 +134,16 @@ for words_to_remove in removing_words:
 
     feature_importance = pd.DataFrame({'Feature': feature_names, 'Importance': importances_tree})
     feature_importance_pos = feature_importance.sort_values('Importance', ascending=False)[:5]
-    feature_importance_neg = feature_importance.sort_values('Importance', ascending=True)[:5]
+    # Define a threshold value
+    threshold_value = 0.000000001
+
+    # Sort the features by importance, filtering out those that are below the threshold
+    feature_importance_neg = feature_importance[feature_importance['Importance'] > threshold_value] \
+        .sort_values('Importance', ascending=True).head(5)
 
     # Print the top 5 most important features
     print("Top 5 important features for Decision Tree:")
-    print('real', feature_importance_pos['Feature'].values,'fake', feature_importance_neg['Feature'].values)
+    print('Real:', feature_importance_pos['Feature'].values, 'Fake:', feature_importance_neg['Feature'].values)
 
     feature_plot = sns.barplot(feature_importance_pos, x='Feature', y='Importance')
     feature_plot.set_title('Top 5 features for class 1')
@@ -205,14 +208,14 @@ for words_to_remove in removing_words:
     print(f"Random Forest Recall: {recall_rf:.4f}")
     print(f"Random Forest F1 Score: {f1_rf:.4f}")
     print(f"Random Forest Accuracy: {accuracy_rf:.4f}")
-    """
+    
     print(f"Precision (Negative Class): {precision_rf[0]:.4f}")
     print(f"Recall (Negative Class): {recall_rf[0]:.4f}")
     print(f"F1 Score (Negative Class): {f1_rf[0]:.4f}")
     print(f"Precision (Positive Class): {precision_rf[1]:.4f}")
     print(f"Recall (Positive Class): {recall_rf[1]:.4f}")
     print(f"F1 Score (Positive Class): {f1_rf[1]:.4f}")
-    """
+    
     # Get the maximum depth of each tree in the random forest
     max_depths = [tree.tree_.max_depth for tree in best_rf.estimators_]
     # Display the maximum depth of the entire forest (deepest tree)
@@ -241,33 +244,7 @@ for words_to_remove in removing_words:
     feature_plot.set_title('Top 5 features for class 0')
     fig = feature_plot.get_figure()
     fig.savefig('feature_logistic_neg')
+   """
 
-# Plotting the metrics for Decision Tree
-plt.figure(figsize=(12, 8))
-plt.plot(removing_words, metrics_tree['accuracy'], marker='o', label='Accuracy')
-plt.plot(removing_words, metrics_tree['precision'], marker='o', label='Precision')
-plt.plot(removing_words, metrics_tree['recall'], marker='o', label='Recall')
-plt.plot(removing_words, metrics_tree['f1'], marker='o', label='F1 Score')
 
-plt.title('Decision Tree Classifier Metrics over Iterations')
-plt.xlabel('Number of Words Removed')
-plt.ylabel('Score')
-plt.xticks(removing_words)
-plt.grid()
-plt.legend()
-plt.show()
 
-# Plotting the metrics for Random Forest
-plt.figure(figsize=(12, 8))
-plt.plot(removing_words, metrics_rf['accuracy'], marker='o', label='Accuracy')
-plt.plot(removing_words, metrics_rf['precision'], marker='o', label='Precision')
-plt.plot(removing_words, metrics_rf['recall'], marker='o', label='Recall')
-plt.plot(removing_words, metrics_rf['f1'], marker='o', label='F1 Score')
-
-plt.title('Random Forest Classifier Metrics over Iterations')
-plt.xlabel('Number of Words Removed')
-plt.ylabel('Score')
-plt.xticks(removing_words)
-plt.grid()
-plt.legend()
-plt.show()
