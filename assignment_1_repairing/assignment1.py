@@ -69,7 +69,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 left, right, feature, threshold = best_split(x[np.ix_(current_node_instances, candidate_features)], labels, minleaf)
 
                 # store current node info, if it is not a leaf
-                if feature:
+                if feature is not None:
                     current_node.left = Node(left)
                     current_node.right = Node(right)
                     # update list
@@ -202,7 +202,7 @@ def best_split(x, y, minleaf):
                     # follows the x < c instructions, the variable avg is the average of two consecutive numbers
                     avg = (sorted_values[value_index] + sorted_values[value_index + 1]) / 2
                     # select all the indexes where x < c (left child), then select indexes for the right child
-                    mask = split_values <= avg
+                    mask = split_values < avg
                     indexes_left_child = np.where(mask)[0]
                     indexes_right_child = np.where(~mask)[0]
                     if len(indexes_left_child) > minleaf and len(indexes_right_child) > minleaf:
@@ -278,7 +278,7 @@ if __name__ == '__main__':
     credit_y = credit_data[:, 5]
     credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
     credit_pred = tree_pred(credit_x, credit_tree)
-    pd.crosstab(np.array(credit_y), np.array(credit_pred))
+    print(pd.crosstab(np.array(credit_y), np.array(credit_pred)))
 
     # Single tree on pima data
 
@@ -291,7 +291,7 @@ if __name__ == '__main__':
     # confusion matrix should be: 444,56,54,214 (50/50 leaf nodes assigned to class 0)
     # or: 441,59,51,217 (50/50 leaf nodes assigned to class 1)
 
-    pd.crosstab(np.array(pima_y), np.array(pima_pred))
+    print(pd.crosstab(np.array(pima_y), np.array(pima_pred)))
 
     # Compute average and standard deviation of accuracy for single tree
 
