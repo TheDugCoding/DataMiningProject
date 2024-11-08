@@ -76,7 +76,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                     nodelist.append(current_node.left)
                     nodelist.append(current_node.right)
                     current_node.threshold = threshold
-                    current_node.feature = feature
+                    current_node.feature = candidate_features[feature]
                 else:
                     leaves.append(current_node)
                 current_node.predicted_class = statistics.mode(labels)
@@ -110,10 +110,10 @@ def tree_pred(x, tr):
 
     return predicted_labels
 
-def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
+def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
     """
     :param x: rows of the dataset used for creating the tree
-    :param target_feature: name of the feature used for classification
+    :param y: name of the feature used for classification
     :param nmin: the number of observations that a node must contain at least, for it to be allowed to be split.
     :param minleaf: minimum number of observations required for a leaf node
     :param nfeat: number of features used to select the best split
@@ -121,14 +121,15 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
     :return: the function return a list of trees
     """
     trees = []
-    random_indexes_with_replacement = np.random.choice(x.index.tolist(), size=(m,len(x)), replace=True)
+    random_num = np.arange(x.shape[0])
+    random_indexes_with_replacement = np.random.choice(random_num, size=(m,len(x)), replace=True)
 
     if MULTIPROCESSING:
         with ProcessPoolExecutor() as executor:
             futures = []
             # using parallelization to speed up the process, in case parallelization doesn't work change value of the variable MULTIPROCESSING to False
             for i in range(m):
-                future = executor.submit(tree_grow, x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(drop=True), x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin, minleaf, nfeat)
+                future = executor.submit(tree_grow, x, y, nmin, minleaf, nfeat)
                 futures.append(future)
 
             for future in tqdm(as_completed(futures), total=len(futures)):
@@ -136,10 +137,7 @@ def tree_grow_b(x, target_feature, nmin, minleaf, nfeat, m):
 
     else:
         for i in tqdm(range(m)):
-            tree = tree_grow(     x.loc[random_indexes_with_replacement[i], x.columns != target_feature].reset_index(
-                                         drop=True),
-                                     x.loc[random_indexes_with_replacement[i], target_feature].reset_index(drop=True), nmin,
-                                     minleaf, nfeat)
+            tree = tree_grow(x,y, nmin, minleaf, nfeat)
             trees.append(tree)
 
 
@@ -299,13 +297,13 @@ if __name__ == '__main__':
 
     # Compute average and standard deviation of accuracy for bagging/random forest
 
-    rf_test(pima_x, pima_y, 20, 5, 2, 25, 25)
-    rf_test(pima_x, pima_y, 20, 5, 8, 25, 25)
+    print(rf_test(pima_x, pima_y, 20, 5, 2, 25, 25))
+    print(rf_test(pima_x, pima_y, 20, 5, 8, 25, 25))
 
     # Measure time for training and prediction with random forest
 
     start = time.time()
-    rf_test(pima_x, pima_y, 20, 5, 8, 25, 25)
+    print(rf_test(pima_x, pima_y, 20, 5, 8, 25, 25))
     end = time.time()
     print("The execution time is :", (end - start), "seconds")
 
