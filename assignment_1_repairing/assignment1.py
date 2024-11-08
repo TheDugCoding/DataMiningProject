@@ -70,8 +70,8 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
 
                 # store current node info, if it is not a leaf
                 if feature is not None:
-                    current_node.left = Node(left)
-                    current_node.right = Node(right)
+                    current_node.left = Node(current_node_instances[left])
+                    current_node.right = Node(current_node_instances[right])
                     # update list
                     nodelist.append(current_node.left)
                     nodelist.append(current_node.right)
@@ -85,7 +85,6 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                 # return the final prediction of the leaf node
                 current_node.predicted_class = statistics.mode(labels)
                 leaves.append(current_node)
-            i+= 1
         return Tree(root, leaves)
     else:
         raise ValueError("x is empty")
@@ -100,7 +99,7 @@ def tree_pred(x, tr):
     for index, row in enumerate(x):
         current_node = tr.root
         # a leaf node doesn't contain a feature
-        while current_node.feature:
+        while current_node.feature is not None:
             # left branch
             if row[current_node.feature] < current_node.threshold:
                 current_node = current_node.left
@@ -205,7 +204,7 @@ def best_split(x, y, minleaf):
                     mask = split_values < avg
                     indexes_left_child = np.where(mask)[0]
                     indexes_right_child = np.where(~mask)[0]
-                    if len(indexes_left_child) > minleaf and len(indexes_right_child) > minleaf:
+                    if len(indexes_left_child) >= minleaf and len(indexes_right_child) >= minleaf:
                         # calculate impurity reduction
                         impurity_reduction = impurity_father - (
                                 ((len(y[indexes_left_child]) / elements_in_y) * impurity(y[indexes_left_child])) +
