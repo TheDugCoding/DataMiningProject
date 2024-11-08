@@ -13,6 +13,9 @@ r.campanella@students.uu.nl
 import numpy as np
 import pandas as pd
 import statistics
+from numpy import genfromtxt
+import time
+
 
 from tqdm import tqdm
 
@@ -21,13 +24,13 @@ from concurrent.futures import ProcessPoolExecutor, as_completed
 """
 Uncomment this part to run the examples (need to download the datasets listed in the README file)
 credit_data_with_headers = pd.read_csv('data/credit.txt', delimiter=',')
-indians = pd.read_csv('data/indians.txt', delimiter=',', names=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'])
+indians = pd.read_csv('data/pima.txt', delimiter=',', names=['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'])
 """
 
 #True use multiprocessing, False don't use multiprocessing
 MULTIPROCESSING = True
 
-def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
+def tree_grow(x, y, nmin, minleaf, nfeat):
     """
     :param x: rows of the dataset used for creating the tree
     :param y: rows of the target features used for creating the tree
@@ -36,14 +39,14 @@ def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
     :param nfeat: number of features that should be considered for each split
     :return: the function returns a binary tree
     """
-    if not x.empty:
-        root = Node(x.index)
+    if x.size > 0:
+        root = Node(np.arange(x.shape[1]))
         nodelist = [root]
         leaves = []
         i = 0
 
         # tree grow stops when we split all the nodes
-        while i < len(nodelist):
+        while nodelist:
             # visit all the nodes in the list, for optimization we don't use 'pop' we just iterate over the nodes
             current_node = nodelist[i]
 
@@ -51,16 +54,19 @@ def tree_grow(x: pd.DataFrame, y, nmin, minleaf, nfeat):
             current_node_instances = current_node.instances
 
             # store node in the tree before splitting
-            labels = y.iloc[current_node_instances]
+            labels = y[current_node_instances]
 
             # avoid splitting leaf nodes with zero impurity and check that there are enough observations for a split
             if impurity(labels) > 0 and len(current_node.instances) >= nmin:
 
                 # random sample nfeat number of columns
-                candidate_features = np.random.choice(x.columns, size=nfeat, replace=False)
+                if nfeat < x.shape[1]:
+                    candidate_features = np.random.choice(x.shape[1], size=nfeat, replace=False)
+                else:
+                    candidate_features = np.arange(nfeat)
 
                 # calculate best split and impurity reduction to get child nodes, (if a split is not found feature = None)
-                left, right, feature, threshold = best_split(x.loc[current_node_instances, candidate_features], labels, minleaf)
+                left, right, feature, threshold = best_split(x[current_node_instances, candidate_features], labels, minleaf)
 
                 # store current node info, if it is not a leaf
                 if feature:
@@ -241,43 +247,72 @@ class Tree:
         self.root = root
         self.leaves = leaves
 
+# Function for testing single tree
+
+def single_test(x, y, nmin, minleaf, nfeat, n):
+    acc = np.zeros(n)
+    for i in range(0, n):
+        tr = tree_grow(x, y, nmin, minleaf, nfeat)
+        pred = tree_pred(x, tr)
+        acc[i] = sum(pred == y) / len(y)
+    return [np.mean(acc), np.std(acc)]
+
+
+# Function for testing bagging/random forest
+
+def rf_test(x, y, nmin, minleaf, nfeat, m, n):
+    acc = np.zeros(n)
+    for i in range(0, n):
+        tr_list = tree_grow_b(x, y, nmin, minleaf, nfeat, m)
+        pred = tree_pred_b(x, tr_list)
+        acc[i] = sum(pred == y) / len(y)
+    return [np.mean(acc), np.std(acc)]
+
+
 if __name__ == '__main__':
 
-    """
-    #code Examples
-    #print(best_split(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2))
+    # Basic test on credit data. Prediction should be perfect.
 
-    single_tree = tree_grow(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], credit_data_with_headers['class'], 2, 2, 5)
-    # print(single_tree)
+    credit_data = genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
+    credit_x = credit_data[:, 0:5]
+    credit_y = credit_data[:, 5]
+    credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
+    credit_pred = tree_pred(credit_x, credit_tree)
+    pd.crosstab(np.array(credit_y), np.array(credit_pred))
 
-    ensamble_tree = tree_grow_b(credit_data_with_headers, 'class', 2, 2, 5, 10)
-    # print(ensamble_tree)
+    # Single tree on pima data
 
-    #test prediction
-    print('\n\n--prediction single tree')
-    print(tree_pred(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'], single_tree))
+    pima_data = genfromtxt('data/pima.txt', delimiter=',')
+    pima_x = pima_data[:, 0:8]
+    pima_y = pima_data[:, 8]
+    pima_tree = tree_grow(pima_x, pima_y, 20, 5, 8)
+    pima_pred = tree_pred(pima_x, pima_tree)
 
-    #test prediction_b
-    print('\n\n--prediction all trees')
-    predictions = tree_pred_b(credit_data_with_headers.loc[:, credit_data_with_headers.columns != 'class'].iloc[-2:], ensamble_tree)
-    print(predictions)
+    # confusion matrix should be: 444,56,54,214 (50/50 leaf nodes assigned to class 0)
+    # or: 441,59,51,217 (50/50 leaf nodes assigned to class 1)
 
-    # test indians confusion matrix
-    print('\n\n--prediction single trees Indian database')
-    indians_tree = tree_grow(indians.drop('i', axis=1), indians['i'], 20, 5, 8)
-    indians_pred = tree_pred(indians.drop('i', axis=1), indians_tree)
-    pred_true = {'00': 0, '10': 0, '01': 0, '11': 0}
-    for i in range(len(indians_pred)):
-        # check whether class of original dataset is equal to predicted class
-        if indians['i'][i] == indians_pred[i]:
-            if indians_pred[i] == 1:
-                pred_true['11'] += 1
-            else:
-                pred_true['00'] += 1
-        else:
-            if indians_pred[i] == 1:
-                pred_true['10'] += 1
-            else:
-                pred_true['01'] += 1
-    print(pred_true)
-    """
+    pd.crosstab(np.array(pima_y), np.array(pima_pred))
+
+    # Compute average and standard deviation of accuracy for single tree
+
+    single_test(pima_x, pima_y, 20, 5, 2, 25)
+    single_test(pima_x, pima_y, 20, 5, 8, 25)
+
+    # Compute average and standard deviation of accuracy for bagging/random forest
+
+    rf_test(pima_x, pima_y, 20, 5, 2, 25, 25)
+    rf_test(pima_x, pima_y, 20, 5, 8, 25, 25)
+
+    # Measure time for training and prediction with random forest
+
+    start = time.time()
+    rf_test(pima_x, pima_y, 20, 5, 8, 25, 25)
+    end = time.time()
+    print("The execution time is :", (end - start), "seconds")
+
+
+
+
+
+
+
