@@ -40,7 +40,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
     :return: the function returns a binary tree
     """
     if x.size > 0:
-        root = Node(np.arange(x.shape[1]))
+        root = Node(np.arange(x.shape[0]))
         nodelist = [root]
         leaves = []
         i = 0
@@ -48,7 +48,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
         # tree grow stops when we split all the nodes
         while nodelist:
             # visit all the nodes in the list, for optimization we don't use 'pop' we just iterate over the nodes
-            current_node = nodelist[i]
+            current_node = nodelist.pop(0)
 
             # store the node instances
             current_node_instances = current_node.instances
@@ -66,7 +66,7 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                     candidate_features = np.arange(nfeat)
 
                 # calculate best split and impurity reduction to get child nodes, (if a split is not found feature = None)
-                left, right, feature, threshold = best_split(x[current_node_instances, candidate_features], labels, minleaf)
+                left, right, feature, threshold = best_split(x[np.ix_(current_node_instances, candidate_features)], labels, minleaf)
 
                 # store current node info, if it is not a leaf
                 if feature:
@@ -97,7 +97,7 @@ def tree_pred(x, tr):
     :return: a single dimensional array containing the prediction of the tree
     """
     predicted_labels = []
-    for index, row in x.iterrows():
+    for index, row in enumerate(x):
         current_node = tr.root
         # a leaf node doesn't contain a feature
         while current_node.feature:
@@ -190,9 +190,9 @@ def best_split(x, y, minleaf):
     elements_in_y = len(y)
 
     if len(x) == elements_in_y:
-        for split in x.columns:
+        for split in np.arange(x.shape[1]):
             # check how many unique values there are
-            split_values = x[split]
+            split_values = x[:, split]
             sorted_values = np.unique(split_values)
 
 
@@ -203,8 +203,8 @@ def best_split(x, y, minleaf):
                     avg = (sorted_values[value_index] + sorted_values[value_index + 1]) / 2
                     # select all the indexes where x < c (left child), then select indexes for the right child
                     mask = split_values <= avg
-                    indexes_left_child = split_values[mask].index
-                    indexes_right_child = split_values[~mask].index
+                    indexes_left_child = np.where(mask)[0]
+                    indexes_right_child = np.where(~mask)[0]
                     if len(indexes_left_child) > minleaf and len(indexes_right_child) > minleaf:
                         # calculate impurity reduction
                         impurity_reduction = impurity_father - (
@@ -295,8 +295,8 @@ if __name__ == '__main__':
 
     # Compute average and standard deviation of accuracy for single tree
 
-    single_test(pima_x, pima_y, 20, 5, 2, 25)
-    single_test(pima_x, pima_y, 20, 5, 8, 25)
+    print(single_test(pima_x, pima_y, 20, 5, 2, 25))
+    print(single_test(pima_x, pima_y, 20, 5, 8, 25))
 
     # Compute average and standard deviation of accuracy for bagging/random forest
 

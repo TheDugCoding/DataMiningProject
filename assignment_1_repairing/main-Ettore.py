@@ -255,7 +255,7 @@ import time
 
 # Basic test on credit data. Prediction should be perfect.
 
-credit_data = genfromtxt('../credit.txt', delimiter=',', skip_header=True)
+credit_data = genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
 credit_x = credit_data[:,0:5]
 credit_y = credit_data[:,5]
 credit_tree = tree_grow(credit_x,credit_y,2,1,5)
@@ -264,7 +264,7 @@ pd.crosstab(np.array(credit_y),np.array(credit_pred))
 
 # Single tree on pima data
 
-pima_data = genfromtxt('../pima.txt', delimiter=',')
+pima_data = genfromtxt('data/pima.txt', delimiter=',')
 pima_x = pima_data[:,0:8]
 pima_y = pima_data[:,8]
 pima_tree = tree_grow(pima_x,pima_y,20,5,8)
@@ -297,8 +297,8 @@ def rf_test(x,y,nmin,minleaf,nfeat,m,n):
 
 # Compute average and standard deviation of accuracy for single tree
 
-single_test(pima_x,pima_y,20,5,2,25)
-single_test(pima_x,pima_y,20,5,8,25)
+print(single_test(pima_x,pima_y,20,5,2,25))
+print(single_test(pima_x,pima_y,20,5,8,25))
 
 # Compute average and standard deviation of accuracy for bagging/random forest
 
