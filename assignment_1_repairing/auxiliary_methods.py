@@ -1,4 +1,10 @@
 from assignment1 import *
+import numpy as np
+import pandas as pd
+import statistics
+
+from statsmodels.stats.contingency_tables import mcnemar
+from tqdm import tqdm
 
 def print_tree_recursive(node, level=0, side="root", split_level=3):
     """ Recursively print the structure of the decision tree. """
@@ -72,6 +78,7 @@ if __name__ == '__main__':
     credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
     credit_pred = tree_pred(credit_x, credit_tree)
     print(pd.crosstab(np.array(credit_y), np.array(credit_pred)))
+    print_tree(single_credit=credit_tree)
 
     # Single tree on pima data
 
@@ -80,11 +87,6 @@ if __name__ == '__main__':
     pima_y = pima_data[:, 8]
     pima_tree = tree_grow(pima_x, pima_y, 20, 5, 8)
     pima_pred = tree_pred(pima_x, pima_tree)
-
-    # confusion matrix should be: 444,56,54,214 (50/50 leaf nodes assigned to class 0)
-    # or: 441,59,51,217 (50/50 leaf nodes assigned to class 1)
-
-    print(pd.crosstab(np.array(pima_y), np.array(pima_pred)))
 
     # Compute average and standard deviation of accuracy for single tree
 
@@ -103,9 +105,7 @@ if __name__ == '__main__':
     end = time.time()
     print("The execution time is :", (end - start), "seconds")
 
-	#print_tree(single_credit=single_tree, ensamble_credit=False, single_indians=indians_tree, single_eclipse=train_tree, bagging=False, random_forest=False)
-	#print_tree(single_credit=single_tree, ensamble_credit=ensamble_tree, single_indians=False, single_eclipse=False, bagging=False, random_forest=False)
-	#print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=train_tree, bagging=False, random_forest=False)
+    
 
 	# Pairwise comparisons (without correction)
 	p_value_single_tree_bagging = mcnemar_test(test_data['post'], test_tree, test_bagging)
