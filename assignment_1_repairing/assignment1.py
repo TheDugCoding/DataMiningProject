@@ -132,7 +132,7 @@ def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
             futures = []
             # using parallelization to speed up the process, in case parallelization doesn't work change value of the variable MULTIPROCESSING to False
             for i in range(m):
-                future = executor.submit(tree_grow, x, y, nmin, minleaf, nfeat)
+                future = executor.submit(tree_grow, x[random_indexes_with_replacement[i]], y[random_indexes_with_replacement[i]], nmin, minleaf, nfeat)
                 futures.append(future)
 
             for future in tqdm(as_completed(futures), total=len(futures)):
@@ -140,7 +140,7 @@ def tree_grow_b(x, y, nmin, minleaf, nfeat, m):
 
     else:
         for i in tqdm(range(m)):
-            tree = tree_grow(x,y, nmin, minleaf, nfeat)
+            tree = tree_grow(x[random_indexes_with_replacement[i]], y[random_indexes_with_replacement[i]], nmin, minleaf, nfeat)
             trees.append(tree)
 
 
