@@ -3,15 +3,15 @@ import numpy as np
 import pandas as pd
 from statsmodels.stats.contingency_tables import mcnemar
 
-def print_tree_recursive(dataset, node, level=0, side="root", split_level=3):
+def print_tree_recursive(header, node, level=0, side="root", split_level=3):
     """ Recursively print the structure of the decision tree. """
     if node is None:
         print("The tree is empty.")
         return
-
+    if isinstance(node, Tree):
+       node = node.root
+                
     indent = "   " * level  # Indentation for visual representation
-    
-
     # Check if node is a leaf
     if node != [] and split_level > 0:
         if node.left is None and node.right is None:
@@ -19,14 +19,14 @@ def print_tree_recursive(dataset, node, level=0, side="root", split_level=3):
             print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}, Class distribution={node.class_distribution}")
         else:
             # Internal node: print splitting feature and threshold 
-            print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}, Class distribution={node.class_distribution}")
+            print(f"{indent}- {side} [Node] Feature: {header[node.feature]}, Threshold: {node.threshold}, Instances: {len(node.instances)}, Class distribution={node.class_distribution}")
 
             # Recursively print the left and right subtrees
-            print_tree_recursive(dataset, node.left, level + 1, "left", split_level - 1)
-            print_tree_recursive(dataset, node.right, level + 1, "right", split_level - 1)
+            print_tree_recursive(header, node.left, level + 1, "left", split_level - 1)
+            print_tree_recursive(header, node.right, level + 1, "right", split_level - 1)
 
 
-def print_tree(dataset, single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=False, bagging=False, random_forest=False):
+def print_tree(header, single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=False, bagging=False, random_forest=False):
     trees_to_process = [
         (single_credit, "Single tree - Credit data"),
         (single_indians, "Single tree - Indians data"),
@@ -41,10 +41,10 @@ def print_tree(dataset, single_credit=False, ensamble_credit=False, single_india
             if isinstance(tree, list):
                 print(message)
                 for t in tree:
-                    print_tree_recursive(t)
+                    print_tree_recursive(header=header, node=t)
             else:
                 print(message)
-                print_tree_recursive(dataset, tree)
+                print_tree_recursive(header=header, node=tree)
 
 def mcnemar_test(y_true, y_pred1, y_pred2):
     # We need to compare the predictions to build the contingency table
@@ -82,9 +82,12 @@ def load_and_filter_data(file_path, delimiter=';'):
     # Load the entire dataset, skipping the header
     data = np.genfromtxt(file_path, delimiter=delimiter, skip_header=1, usecols=keep_indices)
     
-    # Return the filtered data and index of the 'post' column for binarization
-    post_idx = [i for i, col in enumerate(header) if col == 'post']
-    return data, post_idx[0]
+    # Get the filtered column names
+    filtered_header = [header[i] for i in keep_indices]
+    
+    # Return the filtered data, index of the 'post' column in the filtered list, and the filtered header
+    post_idx = filtered_header.index('post')  # Now it's the index within `filtered_header`
+    return data, post_idx, filtered_header
 
 def prepare_data(data, post_idx):
     """
@@ -122,18 +125,10 @@ def compute_metrics(conf_matrix):
 
 if __name__ == '__main__':
 	""" Uncomment to test data structures has been handled consistently""" 
-	# Basic test on credit data.
-	credit_data = np.genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
-	credit_x, credit_y = credit_data[:, 0:5], credit_data[:, 5]
-	credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
-	credit_pred = tree_pred(credit_x, credit_tree)
-	print(pd.crosstab(pd.Series(credit_y), pd.Series(credit_pred)))
-	print_tree(single_credit=credit_tree.root, credit_x)
-    
     # Load and prepare Eclipse 2.0 and Eclipse 3.0 datasets
-	eclipse_2_data, post_index_2 = load_and_filter_data('data/eclipse-metrics-packages-2.0.csv')
-	eclipse_3_data, post_index_3 = load_and_filter_data('data/eclipse-metrics-packages-3.0.csv')
-
+	eclipse_2_data, post_index_2, header_train = load_and_filter_data('data/eclipse-metrics-packages-2.0.csv')
+	eclipse_3_data, post_index_3, header_test = load_and_filter_data('data/eclipse-metrics-packages-3.0.csv')
+	
 	# Prepare training and test datasets
 	X_train, y_train = prepare_data(eclipse_2_data, post_index_2)
 	X_test, y_test = prepare_data(eclipse_3_data, post_index_3)
@@ -152,6 +147,7 @@ if __name__ == '__main__':
 	# Training - single tree
 	train_tree = tree_grow(X_train, y_train, 15, 5, 41)
 	test_tree = tree_pred(X_test, train_tree)
+	print_tree(header_train, single_eclipse=train_tree)
 	single_tree_matrix = compute_confusion_matrix(test_tree, y_test)
 	single_tree_metrics = compute_metrics(single_tree_matrix)
 	print('Single Tree', single_tree_metrics)
