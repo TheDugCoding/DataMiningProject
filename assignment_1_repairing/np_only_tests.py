@@ -1,6 +1,7 @@
-from assignment1 import *
+from assignment1_revert import *
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
 from statsmodels.stats.contingency_tables import mcnemar
 
 def print_tree_recursive(header, node, level=0, side="root", split_level=3):
@@ -123,6 +124,65 @@ def compute_metrics(conf_matrix):
     recall = tp / (tp + fn) if (tp + fn) > 0 else 0
     return accuracy, precision, recall
 
+# Function to plot model performance
+def plot_model_performance(models_metrics, model_names):
+    """Plot accuracy, precision, and recall for each model."""
+    # Convert the list of metrics dictionaries to a NumPy array for easier plotting
+    metrics_array = np.array(models_metrics)
+    
+    # Extract individual metrics for plotting
+    accuracies = metrics_array[:, 0]
+    precisions = metrics_array[:, 1]
+    recalls = metrics_array[:, 2]
+
+    # Plotting accuracy, precision, and recall for each model
+    fig, ax = plt.subplots(1, 3, figsize=(15, 5))
+    
+    ax[0].bar(model_names, accuracies, color='skyblue')
+    ax[0].set_title("Model Accuracy")
+    ax[0].set_ylim([0, 1])
+    ax[0].set_xlabel("Models")
+    ax[0].set_ylabel("Accuracy")
+    
+    ax[1].bar(model_names, precisions, color='salmon')
+    ax[1].set_title("Model Precision")
+    ax[1].set_ylim([0, 1])
+    ax[1].set_xlabel("Models")
+    ax[1].set_ylabel("Precision")
+    
+    ax[2].bar(model_names, recalls, color='lightgreen')
+    ax[2].set_title("Model Recall")
+    ax[2].set_ylim([0, 1])
+    ax[2].set_xlabel("Models")
+    ax[2].set_ylabel("Recall")
+    
+    plt.tight_layout()
+    plt.savefig("all_model_performance.png", format="png")
+    plt.show()
+
+# Function to visualize variance reduction with bagging
+def plot_bagging_variance(X_test, y_test, n_estimators=5):
+    """Plot variance in error rates across bagging model predictions."""
+    error_rates = []
+    
+    for i in range(1, n_estimators + 1):
+        # Train a bagging ensemble with i trees
+        bagging_model = tree_grow_b(X_train, y_train, 15, 5, 41, i)
+        predictions = tree_pred_b(X_test, bagging_model)
+        
+        # Calculate error rate and store it
+        error_rate = np.mean(predictions != y_test)
+        error_rates.append(error_rate)
+    
+    # Plotting error rate variance reduction
+    plt.figure(figsize=(10, 5))
+    plt.plot(range(1, n_estimators + 1), error_rates, marker='o', linestyle='-', color='blue')
+    plt.title("Bagging Error Rate vs. Number of Trees")
+    plt.xlabel("Number of Trees")
+    plt.ylabel("Error Rate")
+    plt.savefig("error_rate_variance_reduction.png", format="png")
+    plt.show()
+
 if __name__ == '__main__':
 	""" Uncomment to test data structures has been handled consistently""" 
     # Load and prepare Eclipse 2.0 and Eclipse 3.0 datasets
@@ -143,6 +203,10 @@ if __name__ == '__main__':
 	print(f"Training labels distribution: {np.bincount(y_train)}")
 	print(f"Test features shape: {X_test.shape}")
 	print(f"Test labels distribution: {np.bincount(y_test)}")
+        
+	# Model training and evaluation metrics collection
+	model_metrics = []
+	model_names = ["Single Tree", "Bagging", "Random Forest"]
 
 	# Training - single tree
 	train_tree = tree_grow(X_train, y_train, 15, 5, 41)
@@ -152,6 +216,7 @@ if __name__ == '__main__':
 	single_tree_metrics = compute_metrics(single_tree_matrix)
 	print('Single Tree', single_tree_metrics)
 	print(single_tree_matrix)
+	model_metrics.append(single_tree_metrics)
 
 	# Training - bagging
 	train_bagging = tree_grow_b(X_train, y_train, 15, 5, 41, 100)
@@ -160,6 +225,7 @@ if __name__ == '__main__':
 	bagging_metrics = compute_metrics(bagging_matrix)
 	print('Bagging', bagging_metrics)
 	print(bagging_matrix)
+	model_metrics.append(bagging_metrics)
 
 	# Training - random forest
 	train_random = tree_grow_b(X_train, y_train, 15, 5, 6, 100)
@@ -168,6 +234,8 @@ if __name__ == '__main__':
 	random_metrics = compute_metrics(random_matrix)
 	print('Random Forest', random_metrics)
 	print(random_matrix)
+	model_metrics.append(random_metrics)
+
 
 	# Statistical Tests (McNemar) for Accuracy Differences
 	comparisons = [
@@ -191,3 +259,9 @@ if __name__ == '__main__':
 			print(f"{comparison_name}: Significant difference after Bonferroni correction at alpha = {bonferroni_alpha:.4f}")
 		else:
 			print(f"{comparison_name}: No significant difference after Bonferroni correction at alpha = {bonferroni_alpha:.4f}")
+                        
+    # Plot model performance comparison
+	plot_model_performance(model_metrics, model_names)
+
+	# Plot error rate variance reduction with bagging
+	#plot_bagging_variance(X_test, y_test)
