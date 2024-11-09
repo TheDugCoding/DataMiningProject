@@ -105,7 +105,6 @@ if __name__ == '__main__':
     credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
     credit_pred = tree_pred(credit_x, credit_tree)
     print(pd.crosstab(pd.Series(credit_y), pd.Series(credit_pred)))
-    print_tree(single_credit=credit_tree.root)
 
     # Prepare Eclipse data for statistical tests
     feature_cols = ['pre', 'post', 'FOUT', 'MLOC', 'NBD', 'PAR', 'VG', 'NOF', 'NOM', 'NSF', 'NSM', 'ACD', 'NOI', 'NOT', 'TLOC', 'NOCU']
