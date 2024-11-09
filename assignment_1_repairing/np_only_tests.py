@@ -1,6 +1,5 @@
-from assignment1_revert import *
+from assignment1 import *
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
 from statsmodels.stats.contingency_tables import mcnemar
 
