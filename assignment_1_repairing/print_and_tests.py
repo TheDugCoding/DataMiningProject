@@ -15,10 +15,10 @@ def print_tree_recursive(node, level=0, side="root", split_level=3):
     if node != [] and split_level > 0:
         if node.left is None and node.right is None:
             # Leaf node: print predicted class and number of instances
-            print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}, Class distribution={}")
+            print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}, Class distribution={node.class_distribution}")
         else:
             # Internal node: print splitting feature and threshold
-            print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}, Class distribution={}, left")
+            print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}, Class distribution={node.class_distribution}")
 
             # Recursively print the left and right subtrees
             print_tree_recursive(node.left, level + 1, "left", split_level - 1)
@@ -75,7 +75,7 @@ if __name__ == '__main__':
     credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
     credit_pred = tree_pred(credit_x, credit_tree)
     print(pd.crosstab(np.array(credit_y), np.array(credit_pred)))
-    print_tree(single_credit=credit_tree)
+    print_tree(single_credit=credit_tree.root)
     
 
     # Trainign to perfrom the Statistical tests 
@@ -83,7 +83,6 @@ if __name__ == '__main__':
     # Read data
     eclipse_2 = pd.read_csv('data/eclipse-metrics-packages-2.0.csv', delimiter=';')
     eclipse_3 = pd.read_csv('data/eclipse-metrics-packages-3.0.csv', delimiter=';')
-    diabetes = pd.read_csv('data/diabetes.csv', delimiter=',')
 
     # clean data for part 2
     features_data = ['pre', 'post', 'FOUT', 'MLOC', 'NBD', 'PAR', 'VG', 'NOF', 'NOM', 'NSF', 'NSM', 'ACD', 'NOI', 'NOT', 'TLOC', 'NOCU']
@@ -96,12 +95,18 @@ if __name__ == '__main__':
     test_data = eclipse_3[keep_col_list]
     training_data.loc[training_data['post'] > 0, 'post'] = 1
     test_data.loc[test_data['post'] > 0, 'post'] = 1
-    training_features = training_data.drop('post', axis=1)
-    test_features = test_data.drop('post', axis=1)
+    training_features = training_data.drop('post', axis=1).to_numpy()
+    test_features = test_data.drop('post', axis=1).to_numpy()
+    x_train = training_data.to_numpy()
+    x_test = test_data.to_numpy()
+    y_train = training_data['post'].to_numpy().astype(int)
+    y_test = test_data['post'].to_numpy().astype(int)
+    print(f"Class distribution for Eclipse 3: {np.bincount(training_data['post'])}")
+    print(f"Class distribution for Eclipse 2: {np.bincount(test_data['post'])}")
 
     # training - single tree
     print('\n\n--prediction single tree dataset')
-    train_tree = tree_grow(training_features, training_data['post'], 15, 5, 41)
+    train_tree = tree_grow(training_features,  y_train, 15, 5, 41)
     test_tree = tree_pred(test_features, train_tree)
 
     confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
@@ -126,8 +131,8 @@ if __name__ == '__main__':
 
     # training - bagging
     print('\n\n--prediction bagging dataset')
-    train_bagging = tree_grow_b(training_data, 'post', 15, 5, 41, 100)
-    test_bagging = tree_pred_b(test_data, train_bagging)
+    train_bagging = tree_grow_b(x_train, y_train, 15, 5, 41, 100)
+    test_bagging = tree_pred_b(x_test, train_bagging)
     confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
     for i in range(len(test_bagging)):
         # check whether pred (tree) and true data are equal
@@ -150,8 +155,8 @@ if __name__ == '__main__':
 
     # training - random forest
     print('\n\n--prediction random forest dataset')
-    train_random = tree_grow_b(training_data, 'post', 15, 5, 6, 100)
-    test_random = tree_pred_b(test_data, train_random)
+    train_random = tree_grow_b(x_train, y_test, 15, 5, 6, 100)
+    test_random = tree_pred_b(x_test, train_random)
     confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
     for i in range(len(test_random)):
         # check whether pred (tree) and true data are equal
