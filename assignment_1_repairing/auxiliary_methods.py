@@ -79,33 +79,8 @@ if __name__ == '__main__':
     credit_pred = tree_pred(credit_x, credit_tree)
     print(pd.crosstab(np.array(credit_y), np.array(credit_pred)))
     print_tree(single_credit=credit_tree)
-
-    # Single tree on pima data
-
-    pima_data = genfromtxt('data/pima.txt', delimiter=',')
-    pima_x = pima_data[:, 0:8]
-    pima_y = pima_data[:, 8]
-    pima_tree = tree_grow(pima_x, pima_y, 20, 5, 8)
-    pima_pred = tree_pred(pima_x, pima_tree)
-
-    # Compute average and standard deviation of accuracy for single tree
-
-    print(single_test(pima_x, pima_y, 20, 5, 2, 25))
-    print(single_test(pima_x, pima_y, 20, 5, 8, 25))
-
-    # Compute average and standard deviation of accuracy for bagging/random forest
-
-    print(rf_test(pima_x, pima_y, 20, 5, 2, 25, 25))
-    print(rf_test(pima_x, pima_y, 20, 5, 8, 25, 25))
-
-    # Measure time for training and prediction with random forest
-
-    start = time.time()
-    print(rf_test(pima_x, pima_y, 20, 5, 8, 25, 25))
-    end = time.time()
-    print("The execution time is :", (end - start), "seconds")
-
     
+
 
 	# Pairwise comparisons (without correction)
 	p_value_single_tree_bagging = mcnemar_test(test_data['post'], test_tree, test_bagging)
