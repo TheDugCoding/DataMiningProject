@@ -3,13 +3,14 @@ import numpy as np
 import pandas as pd
 from statsmodels.stats.contingency_tables import mcnemar
 
-def print_tree_recursive(node, level=0, side="root", split_level=3):
+def print_tree_recursive(dataset, node, level=0, side="root", split_level=3):
     """ Recursively print the structure of the decision tree. """
     if node is None:
         print("The tree is empty.")
         return
 
     indent = "   " * level  # Indentation for visual representation
+    
 
     # Check if node is a leaf
     if node != [] and split_level > 0:
@@ -17,15 +18,15 @@ def print_tree_recursive(node, level=0, side="root", split_level=3):
             # Leaf node: print predicted class and number of instances
             print(f"{indent}- {side} [Leaf] Predicted class: {node.predicted_class}, Instances: {len(node.instances)}, Class distribution={node.class_distribution}")
         else:
-            # Internal node: print splitting feature and threshold
+            # Internal node: print splitting feature and threshold 
             print(f"{indent}- {side} [Node] Feature: {node.feature}, Threshold: {node.threshold}, Instances: {len(node.instances)}, Class distribution={node.class_distribution}")
 
             # Recursively print the left and right subtrees
-            print_tree_recursive(node.left, level + 1, "left", split_level - 1)
-            print_tree_recursive(node.right, level + 1, "right", split_level - 1)
+            print_tree_recursive(dataset, node.left, level + 1, "left", split_level - 1)
+            print_tree_recursive(dataset, node.right, level + 1, "right", split_level - 1)
 
 
-def print_tree(single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=False, bagging=False, random_forest=False):
+def print_tree(dataset, single_credit=False, ensamble_credit=False, single_indians=False, single_eclipse=False, bagging=False, random_forest=False):
     trees_to_process = [
         (single_credit, "Single tree - Credit data"),
         (single_indians, "Single tree - Indians data"),
@@ -43,7 +44,7 @@ def print_tree(single_credit=False, ensamble_credit=False, single_indians=False,
                     print_tree_recursive(t)
             else:
                 print(message)
-                print_tree_recursive(tree)
+                print_tree_recursive(dataset, tree)
 
 def mcnemar_test(y_true, y_pred1, y_pred2):
     # We need to compare the predictions to build the contingency table
@@ -120,77 +121,77 @@ def compute_metrics(conf_matrix):
     return accuracy, precision, recall
 
 if __name__ == '__main__':
-    # Basic test on credit data.
-    credit_data = np.genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
-    credit_x, credit_y = credit_data[:, 0:5], credit_data[:, 5]
-    credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
-    credit_pred = tree_pred(credit_x, credit_tree)
-    print(pd.crosstab(pd.Series(credit_y), pd.Series(credit_pred)))
-    print_tree(single_credit=credit_tree.root)
-        
+	""" Uncomment to test data structures has been handled consistently""" 
+	# Basic test on credit data.
+	credit_data = np.genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
+	credit_x, credit_y = credit_data[:, 0:5], credit_data[:, 5]
+	credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
+	credit_pred = tree_pred(credit_x, credit_tree)
+	print(pd.crosstab(pd.Series(credit_y), pd.Series(credit_pred)))
+	print_tree(single_credit=credit_tree.root, credit_x)
+    
     # Load and prepare Eclipse 2.0 and Eclipse 3.0 datasets
-    eclipse_2_data, post_index_2 = load_and_filter_data('data/eclipse-metrics-packages-2.0.csv')
-    eclipse_3_data, post_index_3 = load_and_filter_data('data/eclipse-metrics-packages-3.0.csv')
+	eclipse_2_data, post_index_2 = load_and_filter_data('data/eclipse-metrics-packages-2.0.csv')
+	eclipse_3_data, post_index_3 = load_and_filter_data('data/eclipse-metrics-packages-3.0.csv')
 
-    # Prepare training and test datasets
-    X_train, y_train = prepare_data(eclipse_2_data, post_index_2)
-    X_test, y_test = prepare_data(eclipse_3_data, post_index_3)
+	# Prepare training and test datasets
+	X_train, y_train = prepare_data(eclipse_2_data, post_index_2)
+	X_test, y_test = prepare_data(eclipse_3_data, post_index_3)
 
-    # Output the results to verify
-    print(f"Training features shape: {X_train.shape}")
-    print(f"Training labels distribution: {np.bincount(y_train)}")
-    print(f"Test features shape: {X_test.shape}")
-    print(f"Test labels distribution: {np.bincount(y_test)}")
+	# Output the results to verify
+	print(f"Eclipse 2 Data set size: {X_train.shape}")
+	print(f"Eclipse 3 Data set size: {X_test.shape}")
+	print(f"Class distribution for Eclipse 2: {np.bincount(y_train)}")
+	print(f"Class distribution for Eclipse 3: {np.bincount(y_test)}")
+    # After train-test split 
+	print(f"Training features shape: {X_train.shape}")
+	print(f"Training labels distribution: {np.bincount(y_train)}")
+	print(f"Test features shape: {X_test.shape}")
+	print(f"Test labels distribution: {np.bincount(y_test)}")
 
-    print(f"Eclipse 2 Data set size: {X_train.shape}")
-    print(f"Eclipse 3 Data set size: {X_test.shape}")
-    print(f"Class distribution for Eclipse 2: {np.bincount(y_train)}")
-    print(f"Class distribution for Eclipse 3: {np.bincount(y_test)}")
+	# Training - single tree
+	train_tree = tree_grow(X_train, y_train, 15, 5, 41)
+	test_tree = tree_pred(X_test, train_tree)
+	single_tree_matrix = compute_confusion_matrix(test_tree, y_test)
+	single_tree_metrics = compute_metrics(single_tree_matrix)
+	print('Single Tree', single_tree_metrics)
+	print(single_tree_matrix)
 
-    # Training - single tree
-    train_tree = tree_grow(X_train, y_train, 15, 5, 41)
-    test_tree = tree_pred(X_test, train_tree)
-    single_tree_matrix = compute_confusion_matrix(test_tree, y_test)
-    single_tree_metrics = compute_metrics(single_tree_matrix)
-    print('Single Tree', single_tree_metrics)
-    print(single_tree_matrix)
+	# Training - bagging
+	train_bagging = tree_grow_b(X_train, y_train, 15, 5, 41, 100)
+	test_bagging = tree_pred_b(X_test, train_bagging)
+	bagging_matrix = compute_confusion_matrix(test_bagging, y_test)
+	bagging_metrics = compute_metrics(bagging_matrix)
+	print('Bagging', bagging_metrics)
+	print(bagging_matrix)
 
-    # Training - bagging
-    train_bagging = tree_grow_b(X_train, y_train, 15, 5, 41, 100)
-    test_bagging = tree_pred_b(X_test, train_bagging)
-    bagging_matrix = compute_confusion_matrix(test_bagging, y_test)
-    bagging_metrics = compute_metrics(bagging_matrix)
-    print('Bagging', bagging_metrics)
-    print(bagging_matrix)
+	# Training - random forest
+	train_random = tree_grow_b(X_train, y_train, 15, 5, 6, 100)
+	test_random = tree_pred_b(X_test, train_random)
+	random_matrix = compute_confusion_matrix(test_random, y_test)
+	random_metrics = compute_metrics(random_matrix)
+	print('Random Forest', random_metrics)
+	print(random_matrix)
 
-    # Training - random forest
-    train_random = tree_grow_b(X_train, y_train, 15, 5, 6, 100)
-    test_random = tree_pred_b(X_test, train_random)
-    random_matrix = compute_confusion_matrix(test_random, y_test)
-    random_metrics = compute_metrics(random_matrix)
-    print('Random Forest', random_metrics)
-    print(random_matrix)
+	# Statistical Tests (McNemar) for Accuracy Differences
+	comparisons = [
+		("Single Tree vs Bagging", test_tree, test_bagging),
+		("Bagging vs Random Forest", test_bagging, test_random),
+		("Random Forest vs Single Tree", test_random, test_tree)
+	]
 
-    # Statistical Tests (McNemar) for Accuracy Differences
-    comparisons = [
-        ("Single Tree vs Bagging", test_tree, test_bagging),
-        ("Bagging vs Random Forest", test_bagging, test_random),
-        ("Random Forest vs Single Tree", test_random, test_tree)
-    ]
-    
-    # Set significance levels with Bonferroni correction
-    alpha, bonferroni_alpha = 0.05, 0.05 / 3
-    for comparison_name, model1_preds, model2_preds in comparisons:
-        p_value = mcnemar_test(y_test, model1_preds, model2_preds)
-        print(f"{comparison_name} p-value: {p_value:.4f}")
-        
-        if p_value < alpha:
-            print(f"{comparison_name}: Significant difference at alpha = {alpha:.4f}")
-        else:
-            print(f"{comparison_name}: No significant difference at alpha = {alpha:.4f}")
-        
-        if p_value < bonferroni_alpha:
-            print(f"{comparison_name}: Significant difference after Bonferroni correction at alpha = {bonferroni_alpha:.4f}")
-        else:
-            print(f"{comparison_name}: No significant difference after Bonferroni correction at alpha = {bonferroni_alpha:.4f}")
-    
+	# Set significance levels with Bonferroni correction
+	alpha, bonferroni_alpha = 0.05, 0.05 / 3
+	for comparison_name, model1_preds, model2_preds in comparisons:
+		p_value = mcnemar_test(y_test, model1_preds, model2_preds)
+		print(f"{comparison_name} p-value: {p_value:.4f}")
+		
+		if p_value < alpha:
+			print(f"{comparison_name}: Significant difference at alpha = {alpha:.4f}")
+		else:
+			print(f"{comparison_name}: No significant difference at alpha = {alpha:.4f}")
+		
+		if p_value < bonferroni_alpha:
+			print(f"{comparison_name}: Significant difference after Bonferroni correction at alpha = {bonferroni_alpha:.4f}")
+		else:
+			print(f"{comparison_name}: No significant difference after Bonferroni correction at alpha = {bonferroni_alpha:.4f}")
