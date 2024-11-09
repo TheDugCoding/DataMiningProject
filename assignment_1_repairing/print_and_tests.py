@@ -48,7 +48,7 @@ def print_tree(single_credit=False, ensamble_credit=False, single_indians=False,
 def mcnemar_test(y_true, y_pred1, y_pred2):
     # We need to compare the predictions to build the contingency table
     #correct_bagging = (test_bagging == test_data['post'])
-    correct_rf = (test_random == test_data['post'])
+    #correct_rf = (test_random == y_true)
 
     correct1 = (y_pred1 == y_true)
     correct2 = (y_pred2 == y_true)
@@ -65,148 +65,105 @@ def mcnemar_test(y_true, y_pred1, y_pred2):
 
 
 
+import numpy as np
+import pandas as pd
+
+def compute_confusion_matrix(predictions, true_values):
+    """Compute the confusion matrix."""
+    matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
+    for pred, true in zip(predictions, true_values):
+        if pred == 0 and true == 0:
+            matrix['TN'] += 1
+        elif pred == 0 and true == 1:
+            matrix['FN'] += 1
+        elif pred == 1 and true == 1:
+            matrix['TP'] += 1
+        elif pred == 1 and true == 0:
+            matrix['FP'] += 1
+    return matrix
+
+def compute_metrics(conf_matrix):
+    """Calculate accuracy, precision, and recall from confusion matrix."""
+    tn, fp, fn, tp = conf_matrix['TN'], conf_matrix['FP'], conf_matrix['FN'], conf_matrix['TP']
+    accuracy = (tn + tp) / (tn + fp + fn + tp)
+    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+    return accuracy, precision, recall
+
+def load_and_prepare_data(file_path, features):
+    """Load, filter, and preprocess data from a CSV file."""
+    data = pd.read_csv(file_path, delimiter=';')
+    cols_to_keep = [col for col in data.columns if any(col.startswith(feature) for feature in features)]
+    data = data[cols_to_keep]
+    data['post'] = np.where(data['post'] > 0, 1, 0)
+    return data
+
 if __name__ == '__main__':
-
-    # Basic test on credit data. Prediction should be perfect.
-
-    credit_data = genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
-    credit_x = credit_data[:, 0:5]
-    credit_y = credit_data[:, 5]
+    # Basic test on credit data.
+    credit_data = np.genfromtxt('data/credit.txt', delimiter=',', skip_header=True)
+    credit_x, credit_y = credit_data[:, 0:5], credit_data[:, 5]
     credit_tree = tree_grow(credit_x, credit_y, 2, 1, 5)
     credit_pred = tree_pred(credit_x, credit_tree)
-    print(pd.crosstab(np.array(credit_y), np.array(credit_pred)))
+    print(pd.crosstab(pd.Series(credit_y), pd.Series(credit_pred)))
     print_tree(single_credit=credit_tree.root)
+
+    # Prepare Eclipse data for statistical tests
+    feature_cols = ['pre', 'post', 'FOUT', 'MLOC', 'NBD', 'PAR', 'VG', 'NOF', 'NOM', 'NSF', 'NSM', 'ACD', 'NOI', 'NOT', 'TLOC', 'NOCU']
+    eclipse_2 = load_and_prepare_data('data/eclipse-metrics-packages-2.0.csv', feature_cols)
+    eclipse_3 = load_and_prepare_data('data/eclipse-metrics-packages-3.0.csv', feature_cols)
     
+    training_features = eclipse_2.drop('post', axis=1).to_numpy()
+    test_features = eclipse_3.drop('post', axis=1).to_numpy()
+    y_train, y_test = eclipse_2['post'].to_numpy(), eclipse_3['post'].to_numpy()
 
-    # Trainign to perfrom the Statistical tests 
+    print(f"Eclipse 2 Data set size: {training_features.shape}")
+    print(f"Eclipse 3 Data set size: {test_features.shape}")
+    print(f"Class distribution for Eclipse 2: {np.bincount(y_train)}")
+    print(f"Class distribution for Eclipse 3: {np.bincount(y_test)}")
 
-    # Read data
-    eclipse_2 = pd.read_csv('data/eclipse-metrics-packages-2.0.csv', delimiter=';')
-    eclipse_3 = pd.read_csv('data/eclipse-metrics-packages-3.0.csv', delimiter=';')
-
-    # clean data for part 2
-    features_data = ['pre', 'post', 'FOUT', 'MLOC', 'NBD', 'PAR', 'VG', 'NOF', 'NOM', 'NSF', 'NSM', 'ACD', 'NOI', 'NOT', 'TLOC', 'NOCU']
-    keep_col_list = []
-    for feature in features_data:
-        for col in eclipse_2.columns: 
-            if col.startswith(feature):
-                keep_col_list.append(col)
-    training_data = eclipse_2[keep_col_list]
-    test_data = eclipse_3[keep_col_list]
-    training_data.loc[training_data['post'] > 0, 'post'] = 1
-    test_data.loc[test_data['post'] > 0, 'post'] = 1
-    training_features = training_data.drop('post', axis=1).to_numpy()
-    test_features = test_data.drop('post', axis=1).to_numpy()
-    x_train = training_data.to_numpy()
-    x_test = test_data.to_numpy()
-    y_train = training_data['post'].to_numpy().astype(int)
-    y_test = test_data['post'].to_numpy().astype(int)
-    print(f"Class distribution for Eclipse 3: {np.bincount(training_data['post'])}")
-    print(f"Class distribution for Eclipse 2: {np.bincount(test_data['post'])}")
-
-    # training - single tree
-    print('\n\n--prediction single tree dataset')
-    train_tree = tree_grow(training_features,  y_train, 15, 5, 41)
+    # Training - single tree
+    train_tree = tree_grow(training_features, y_train, 15, 5, 41)
     test_tree = tree_pred(test_features, train_tree)
+    single_tree_matrix = compute_confusion_matrix(test_tree, y_test)
+    single_tree_metrics = compute_metrics(single_tree_matrix)
+    print('Single Tree', single_tree_metrics)
+    print(single_tree_matrix)
 
-    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-    for i in range(len(test_tree)):
-        # check whether pred (tree) and true data are equal
-        if test_tree[i] == 0:
-            if test_data['post'][i] == 0:
-                confusion_matrix['TN'] += 1
-            if test_data['post'][i] > 0:
-                confusion_matrix['FN'] += 1
-        if test_tree[i] > 0:
-            if test_data['post'][i] > 0:
-                confusion_matrix['TP'] += 1
-            if test_data['post'][i] == 0:
-                confusion_matrix['FP'] += 1
+    # Training - bagging
+    train_bagging = tree_grow_b(training_features, y_train, 15, 5, 41, 100)
+    test_bagging = tree_pred_b(test_features, train_bagging)
+    bagging_matrix = compute_confusion_matrix(test_bagging, y_test)
+    bagging_metrics = compute_metrics(bagging_matrix)
+    print('Bagging', bagging_metrics)
+    print(bagging_matrix)
 
-    accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
-    precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
-    recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
-    print('single tree', accuracy, precision, recall)
-    print(confusion_matrix)
+    # Training - random forest
+    train_random = tree_grow_b(training_features, y_train, 15, 5, 6, 100)
+    test_random = tree_pred_b(test_features, train_random)
+    random_matrix = compute_confusion_matrix(test_random, y_test)
+    random_metrics = compute_metrics(random_matrix)
+    print('Random Forest', random_metrics)
+    print(random_matrix)
 
-    # training - bagging
-    print('\n\n--prediction bagging dataset')
-    train_bagging = tree_grow_b(x_train, y_train, 15, 5, 41, 100)
-    test_bagging = tree_pred_b(x_test, train_bagging)
-    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-    for i in range(len(test_bagging)):
-        # check whether pred (tree) and true data are equal
-        if test_bagging[i] == 0:
-            if test_data['post'][i] == 0:
-                confusion_matrix['TN'] += 1
-            if test_data['post'][i] > 0:
-                confusion_matrix['FN'] += 1
-        if test_bagging[i] > 0:
-            if test_data['post'][i] > 0:
-                confusion_matrix['TP'] += 1
-            if test_data['post'][i] == 0:
-                confusion_matrix['FP'] += 1
-
-    accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
-    precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
-    recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
-    print('bagging', accuracy, precision, recall)
-    print(confusion_matrix)
-
-    # training - random forest
-    print('\n\n--prediction random forest dataset')
-    train_random = tree_grow_b(x_train, y_test, 15, 5, 6, 100)
-    test_random = tree_pred_b(x_test, train_random)
-    confusion_matrix = {'TN': 0, 'FP': 0, 'FN': 0, 'TP': 0}
-    for i in range(len(test_random)):
-        # check whether pred (tree) and true data are equal
-        if test_random[i] == 0:
-            if test_data['post'][i] == 0:
-                confusion_matrix['TN'] += 1
-            if test_data['post'][i] > 0:
-                confusion_matrix['FN'] += 1
-        if test_random[i] > 0:
-            if test_data['post'][i] > 0:
-                confusion_matrix['TP'] += 1
-            if test_data['post'][i] == 0:
-                confusion_matrix['FP'] += 1
-
-    accuracy = (confusion_matrix['TN'] + confusion_matrix['TP']) / len(test_tree)
-    precision = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FP'])
-    recall = confusion_matrix['TP'] / (confusion_matrix['TP'] + confusion_matrix['FN'])
-    print('random forest', accuracy, precision, recall)
-    print(confusion_matrix)
-
-
-    # Statistical Tests (McNemar) for the difference in Accuracy 
-
-	# Pairwise comparisons (without correction) 
-    p_value_single_tree_bagging = mcnemar_test(test_data['post'], test_tree, test_bagging)
-    p_value_bagging_rf = mcnemar_test(test_data['post'], test_bagging, test_random)
-    p_value_rf_single_tree = mcnemar_test(test_data['post'], test_random, test_tree)
-
-    # Bonferroni correction: 3 comparisons, so we divide the alpha level by 3
-    alpha = 0.05
-    bonferroni_alpha = 0.05 / 3
-    significance_levels = [alpha, bonferroni_alpha]
-
-    for alpha in significance_levels:
-        print(f"Significance level:  alpha = {alpha:.4f}\n")
-
-        print(f"Single Tree vs Bagging p-value: {p_value_single_tree_bagging:.4f}")
-        if p_value_single_tree_bagging < alpha:
-            print("Significant difference after Bonferroni correction.")
+    # Statistical Tests (McNemar) for Accuracy Differences
+    comparisons = [
+        ("Single Tree vs Bagging", test_tree, test_bagging),
+        ("Bagging vs Random Forest", test_bagging, test_random),
+        ("Random Forest vs Single Tree", test_random, test_tree)
+    ]
+    
+    # Set significance levels with Bonferroni correction
+    alpha, bonferroni_alpha = 0.05, 0.05 / 3
+    for comparison_name, model1_preds, model2_preds in comparisons:
+        p_value = mcnemar_test(y_test, model1_preds, model2_preds)
+        print(f"{comparison_name} p-value: {p_value:.4f}")
+        
+        if p_value < alpha:
+            print(f"{comparison_name}: Significant difference at alpha = {alpha:.4f}")
         else:
-            print("No significant difference after Bonferroni correction.")
-
-        print(f"Bagging vs Random Forest p-value: {p_value_bagging_rf:.4f}")
-        if p_value_bagging_rf < alpha:
-            print("Significant difference after Bonferroni correction.")
+            print(f"{comparison_name}: No significant difference at alpha = {alpha:.4f}")
+        
+        if p_value < bonferroni_alpha:
+            print(f"{comparison_name}: Significant difference after Bonferroni correction at alpha = {bonferroni_alpha:.4f}")
         else:
-            print("No significant difference after Bonferroni correction.")
-
-        print(f"Random Forest vs Single Tree p-value: {p_value_rf_single_tree:.4f}")
-        if p_value_rf_single_tree < alpha:
-            print("Significant difference after Bonferroni correction.")
-        else:
-            print("No significant difference after Bonferroni correction.")
+            print(f"{comparison_name}: No significant difference after Bonferroni correction at alpha = {bonferroni_alpha:.4f}")
