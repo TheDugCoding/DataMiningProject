@@ -79,11 +79,14 @@ def tree_grow(x, y, nmin, minleaf, nfeat):
                     current_node.feature = candidate_features[feature]
                 else:
                     leaves.append(current_node)
-                current_node.predicted_class = statistics.mode(labels)
+                current_node.class_distribution = np.bincount(labels.astype(int))
+                current_node.predicted_class = np.argmax(current_node.class_distribution)
+
 
             else:
                 # return the final prediction of the leaf node
-                current_node.predicted_class = statistics.mode(labels)
+                current_node.class_distribution = np.bincount(labels.astype(int))
+                current_node.predicted_class = np.argmax(current_node.class_distribution)
                 leaves.append(current_node)
         return Tree(root, leaves)
     else:
@@ -231,12 +234,13 @@ def impurity(x):
         return 0
 
 class Node:
-    def __init__(self, instances, feature=None, threshold=None, left=None, right=None, predicted_class=None):
+    def __init__(self, instances, feature=None, threshold=None, left=None, right=None, predicted_class=None, class_distribution=None):
         self.instances = instances
         self.feature = feature
         self.threshold = threshold
         self.left = left
         self.right = right
+        self.class_distribution = class_distribution
         self.predicted_class = predicted_class
 
 class Tree:
